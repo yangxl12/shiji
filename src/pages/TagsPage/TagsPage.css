@@ -1,0 +1,13 @@
+.tags-page {
+  min-height: 100vh;
+  background: #FAFAFA;
+  padding: 16px;
+  padding-top: calc(56px + 16px);
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
+}
+
+.tags-empty-text {
+  font-size: 15px;
+  color: #BBBBBB;
+  line-height: 1.6;
+}

@@ -1,0 +1,26 @@
+{
+  "name": "拾记",
+  "short_name": "拾记",
+  "description": "一款零联网、零注册、零服务器的极简本地笔记工具",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAFA",
+  "theme_color": "#FAFAFA",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

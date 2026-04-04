@@ -1,0 +1,77 @@
+.tag-chip-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #F0F0F0;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 8px;
+  z-index: 99;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tag-chip-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.tag-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: #F5F5F5;
+  color: #666666;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tag-chip:active {
+  opacity: 0.8;
+}
+
+.tag-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.tag-chip-selected {
+  background: #FFFFFF;
+  color: #1A1A1A;
+}
+
+.tag-chip-selected.tag-chip-red {
+  box-shadow: 0 0 0 2px #E54D42;
+}
+
+.tag-chip-selected.tag-chip-orange {
+  box-shadow: 0 0 0 2px #F37B1D;
+}
+
+.tag-chip-selected.tag-chip-yellow {
+  box-shadow: 0 0 0 2px #FBBF24;
+}
+
+.tag-chip-selected.tag-chip-gray {
+  box-shadow: 0 0 0 2px #8C8C8C;
+}
+
+.tag-chip-dot-all {
+  background: linear-gradient(135deg, #E54D42 25%, #F37B1D 25%, #F37B1D 50%, #FBBF24 50%, #FBBF24 75%, #8C8C8C 75%);
+}
+
+.tag-chip-selected.tag-chip-all {
+  box-shadow: 0 0 0 2px #1A1A1A;
+}

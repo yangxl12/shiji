@@ -1,0 +1,21 @@
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  image: node:20
+  script:
+    - npm install
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+
+deploy:
+  stage: deploy
+  image: registry.cn-shenzhen.aliyuncs.com/gitee-go/gitee-pages-cli:latest
+  script:
+    - gitee-pages deploy --branch=master --build-dir=dist
+  only:
+    - master

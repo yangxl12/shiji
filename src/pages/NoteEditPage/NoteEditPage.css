@@ -1,0 +1,255 @@
+.note-edit-page {
+  min-height: 100vh;
+  background: #FAFAFA;
+  display: flex;
+  flex-direction: column;
+}
+
+.note-edit-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #F0F0F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 99;
+}
+
+.note-edit-back {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin: -8px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.note-edit-back svg {
+  width: 24px;
+  height: 24px;
+  fill: #1A1A1A;
+}
+
+.note-edit-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+.note-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.note-edit-btn {
+  font-size: 15px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.note-edit-btn-save {
+  color: #1A1A1A;
+}
+
+.note-edit-btn-delete {
+  color: #E54D42;
+}
+
+.note-edit-content {
+  flex: 1;
+  padding: 72px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.note-edit-input-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1A1A1A;
+  border: none;
+  background: none;
+  outline: none;
+  padding: 0;
+  line-height: 1.4;
+  font-family: inherit;
+}
+
+.note-edit-input-title::placeholder {
+  color: #CCCCCC;
+  font-weight: 400;
+}
+
+.note-edit-divider {
+  height: 1px;
+  background: #F0F0F0;
+  margin: 0;
+}
+
+.note-edit-input-content {
+  flex: 1;
+  font-size: 16px;
+  color: #333333;
+  line-height: 1.8;
+  border: none;
+  background: none;
+  outline: none;
+  padding: 0;
+  resize: none;
+  font-family: inherit;
+}
+
+.note-edit-input-content::placeholder {
+  color: #CCCCCC;
+}
+
+.note-edit-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  border-top: 1px solid #F0F0F0;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 99;
+}
+
+.note-edit-save-btn {
+  font-size: 15px;
+  font-weight: 500;
+  color: #FFFFFF;
+  background: #1A1A1A;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.note-edit-save-btn:active {
+  opacity: 0.9;
+}
+
+.note-edit-created-at {
+  font-size: 13px;
+  color: #BBBBBB;
+}
+
+.note-edit-view-content {
+  flex: 1;
+  padding: 72px 16px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.note-edit-view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.note-edit-view-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1A1A1A;
+  line-height: 1.4;
+  word-break: break-word;
+  flex: 1;
+}
+
+.note-view-tag-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 6px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.note-edit-view-body {
+  font-size: 16px;
+  color: #333333;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.note-edit-view-created {
+  font-size: 13px;
+  color: #BBBBBB;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+/* 详情页底部操作栏 */
+.note-view-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  border-top: 1px solid #F0F0F0;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  z-index: 99;
+}
+
+.note-view-action-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #888888;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.note-view-action-btn:active {
+  background: #F5F5F5;
+  color: #1A1A1A;
+}
+
+.note-view-action-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.note-view-action-btn-delete {
+  color: #BBBBBB;
+}
+
+.note-view-action-btn-delete:active {
+  background: #FFF2F2;
+  color: #E54D42;
+}

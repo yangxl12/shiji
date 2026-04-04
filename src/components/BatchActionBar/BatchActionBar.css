@@ -1,0 +1,76 @@
+.batch-action-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #F0F0F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 101;
+  animation: slideDown 200ms ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.batch-action-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.batch-action-cancel {
+  font-size: 15px;
+  color: #666666;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  margin: -8px;
+}
+
+.batch-action-count {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+.batch-action-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.batch-action-btn {
+  font-size: 15px;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: opacity 0.15s;
+}
+
+.batch-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.batch-action-select-all {
+  color: #1A1A1A;
+}
+
+.batch-action-delete {
+  color: #E54D42;
+}
