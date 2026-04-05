@@ -2,8 +2,69 @@
   min-height: 100vh;
   background: #FAFAFA;
   padding: 16px;
-  padding-top: calc(56px + 16px);
+  padding-top: calc(56px + 56px + 16px);
   padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tags-page-batch {
+  padding-top: calc(56px + 16px);
+}
+
+.tags-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: #FFFFFF;
+  border-bottom: 1px solid #F0F0F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 56px;
+}
+
+.tags-header .tag-chip-nav {
+  flex: 1;
+}
+
+.tags-select-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  color: #666666;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  margin-left: 8px;
+}
+
+.tags-select-btn:active {
+  background: #F5F5F5;
+  color: #1A1A1A;
+}
+
+.tags-select-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.tags-select-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tags-select-btn:disabled:active {
+  background: none;
 }
 
 .tags-empty-text {

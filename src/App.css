@@ -24,8 +24,54 @@ body {
 .app {
   min-height: 100vh;
   background: #FAFAFA;
+  overflow: hidden;
 }
 
+/* Page Container - Both pages are always rendered */
+.app-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #FAFAFA;
+  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              opacity 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform, opacity;
+}
+
+/* List Page */
+.app-page-list {
+  z-index: 1;
+  transform: translateX(0);
+  opacity: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Edit Page - Hidden by default (off-screen to the right) */
+.app-page-edit {
+  z-index: 2;
+  transform: translateX(100%);
+  opacity: 1;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Edit Page visible - Slide in from right */
+.app-page-edit.page-edit-visible {
+  transform: translateX(0);
+}
+
+/* List Page behind - Slight fade and scale when edit page is visible */
+.app-page-list.page-list-behind {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+/* Loading & Error States */
 .app-loading,
 .app-error {
   min-height: 100vh;

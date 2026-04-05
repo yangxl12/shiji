@@ -10,7 +10,7 @@
   justify-content: space-around;
   align-items: flex-start;
   padding-top: 8px;
-  z-index: 100;
+  z-index: 1000;
 }
 
 .tab-item {

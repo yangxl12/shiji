@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { Note, TagColor } from '../../types';
 import {
   NoteCard,
@@ -7,6 +7,7 @@ import {
   BatchActionBar,
   Modal,
 } from '../../components';
+import { softDeleteNote } from '../../db';
 import './TagsPage.css';
 
 interface TagsPageProps {
@@ -22,6 +23,13 @@ interface TagsPageProps {
   onNotesChange: () => void;
   onToast: (message: string) => void;
 }
+
+// Select/Multi-select icon
+const SelectIcon = () => (
+  <svg viewBox="0 0 24 24">
+    <path d="M3 5h2v2H3zm0 6h2v2H3zm0 6h2v2H3zM7 5h14v2H7zm0 6h14v2H7zm0 6h14v2H7z" />
+  </svg>
+);
 
 export function TagsPage({
   notes,
@@ -39,6 +47,9 @@ export function TagsPage({
   // 默认选中红色标签
   const [selectedTag, setSelectedTag] = useState<TagColor | 'all'>('red');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showSingleDeleteModal, setShowSingleDeleteModal] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
+  const [swipedNoteId, setSwipedNoteId] = useState<string | null>(null);
 
   const filteredNotes = useMemo(() => {
     if (selectedTag === 'all') {
@@ -47,11 +58,18 @@ export function TagsPage({
     return notes.filter((note) => note.tagColor === selectedTag);
   }, [notes, selectedTag]);
 
-  const handleLongPress = useCallback(() => {
-    if (!isBatchMode) {
-      onEnterBatchMode();
-    }
-  }, [isBatchMode, onEnterBatchMode]);
+  // Close swiped card when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.note-card-wrapper') && swipedNoteId) {
+        setSwipedNoteId(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [swipedNoteId]);
 
   const handleToggleSelect = useCallback(
     (id: string) => {
@@ -90,6 +108,46 @@ export function TagsPage({
     setShowDeleteModal(false);
   }, []);
 
+  // Single note delete handlers
+  const handleSwipeDelete = useCallback((noteId: string) => {
+    setNoteToDelete(noteId);
+    setShowSingleDeleteModal(true);
+  }, []);
+
+  const handleConfirmSingleDelete = useCallback(async () => {
+    if (!noteToDelete) return;
+    try {
+      await softDeleteNote(noteToDelete);
+      onToast('已删除');
+      setSwipedNoteId(null);
+      onNotesChange();
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : '删除失败');
+    }
+    setShowSingleDeleteModal(false);
+    setNoteToDelete(null);
+  }, [noteToDelete, onToast, onNotesChange]);
+
+  const handleCancelSingleDelete = useCallback(() => {
+    setShowSingleDeleteModal(false);
+    setNoteToDelete(null);
+  }, []);
+
+  // Handle swipe state
+  const handleSwipe = useCallback((noteId: string, isSwiped: boolean) => {
+    if (isSwiped) {
+      setSwipedNoteId(noteId);
+    } else if (swipedNoteId === noteId) {
+      setSwipedNoteId(null);
+    }
+  }, [swipedNoteId]);
+
+  // Enter batch mode - close all swiped cards
+  const handleEnterBatch = useCallback(() => {
+    setSwipedNoteId(null);
+    onEnterBatchMode();
+  }, [onEnterBatchMode]);
+
   const getEmptyText = () => {
     if (selectedTag === 'all') {
       return '还没有被标记的笔记';
@@ -100,7 +158,17 @@ export function TagsPage({
   return (
     <>
       {!isBatchMode && (
-        <TagChipNav selectedTag={selectedTag} onSelect={setSelectedTag} />
+        <div className="tags-header">
+          <TagChipNav selectedTag={selectedTag} onSelect={setSelectedTag} />
+          <button
+            className="tags-select-btn"
+            onClick={handleEnterBatch}
+            disabled={filteredNotes.length === 0}
+            title="多选"
+          >
+            <SelectIcon />
+          </button>
+        </div>
       )}
 
       {isBatchMode && (
@@ -116,7 +184,7 @@ export function TagsPage({
         />
       )}
 
-      <div className="tags-page">
+      <div className={`tags-page ${isBatchMode ? 'tags-page-batch' : ''}`}>
         {filteredNotes.length === 0 ? (
           <EmptyState text={getEmptyText()} />
         ) : (
@@ -126,14 +194,17 @@ export function TagsPage({
               note={note}
               isBatchMode={isBatchMode}
               isSelected={selectedIds.has(note.id)}
+              isSwiped={swipedNoteId === note.id}
               onClick={() => onViewNote(note)}
-              onLongPress={handleLongPress}
               onToggleSelect={() => handleToggleSelect(note.id)}
+              onSwipe={(isSwiped) => handleSwipe(note.id, isSwiped)}
+              onDelete={() => handleSwipeDelete(note.id)}
             />
           ))
         )}
       </div>
 
+      {/* Batch delete modal */}
       <Modal
         isOpen={showDeleteModal}
         title={`确定删除 ${selectedIds.size} 条笔记？`}
@@ -143,6 +214,18 @@ export function TagsPage({
         isDanger={true}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
+      />
+
+      {/* Single delete modal */}
+      <Modal
+        isOpen={showSingleDeleteModal}
+        title="确定删除这条笔记？"
+        content="删除后无法恢复"
+        cancelText="取消"
+        confirmText="删除"
+        isDanger={true}
+        onCancel={handleCancelSingleDelete}
+        onConfirm={handleConfirmSingleDelete}
       />
     </>
   );

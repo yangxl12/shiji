@@ -1,16 +1,12 @@
-.note-list-page {
-  min-height: 100vh;
-  background: #FAFAFA;
-  padding: 16px;
-  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
+.note-list-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
-.note-list-page-batch {
-  padding-top: 72px;
-}
-
+/* Header with select button - Sticky at top */
 .note-list-header {
-  position: fixed;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
@@ -19,8 +15,10 @@
   border-bottom: 1px solid #F0F0F0;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  padding: 0 16px;
   z-index: 99;
+  flex-shrink: 0;
 }
 
 .note-list-title {
@@ -29,10 +27,77 @@
   color: #1A1A1A;
 }
 
-.note-list-content {
-  padding-top: 56px;
+.note-list-select-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  color: #666666;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.note-list-content-batch {
-  padding-top: 0;
+.note-list-select-btn:active {
+  background: #F5F5F5;
+  color: #1A1A1A;
+}
+
+.note-list-select-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.note-list-select-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.note-list-select-btn:disabled:active {
+  background: none;
+}
+
+/* Scrollable content area */
+.note-list-scroll {
+  flex: 1;
+  padding: 16px;
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 80px);
+}
+
+/* Pull indicator at top */
+.note-list-pull-indicator {
+  height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  flex-shrink: 0;
+}
+
+.note-list-pull-indicator.visible {
+  height: 60px;
+}
+
+.note-list-pull-indicator-text {
+  font-size: 14px;
+  color: #BBBBBB;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+
+.note-list-pull-indicator.visible .note-list-pull-indicator-text {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Pull to bounce container */
+.note-list-pull-container {
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }

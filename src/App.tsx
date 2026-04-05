@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Note, Category, TabType, ToastMessage } from './types';
 import { initDB, getNotesByCategory, getAllTaggedNotes } from './db';
-import { TabBar, ToastContainer } from './components';
+import { TabBar, ToastContainer, FAB } from './components';
 import { NoteListPage, TagsPage, NoteEditPage } from './pages';
 import './App.css';
 
@@ -11,6 +11,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('impromptu');
+  const [showEditPage, setShowEditPage] = useState(false);
   const [currentPage, setCurrentPage] = useState<PageType>('list');
   const [notes, setNotes] = useState<Note[]>([]);
   const [taggedNotes, setTaggedNotes] = useState<Note[]>([]);
@@ -59,11 +60,12 @@ function App() {
     }
   }, [activeTab, loadNotes]);
 
+  // Refresh notes when returning to list
   useEffect(() => {
-    if (!isLoading && !dbError && currentPage === 'list') {
+    if (!isLoading && !dbError && !showEditPage) {
       loadNotes();
     }
-  }, [currentPage, isLoading, dbError, loadNotes]);
+  }, [showEditPage, isLoading, dbError, loadNotes]);
 
   const handleCloseToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -71,38 +73,53 @@ function App() {
 
   const handleTabChange = useCallback((tab: TabType) => {
     setActiveTab(tab);
-    setCurrentPage('list');
+    // If on edit page, animate back to list first
+    if (showEditPage) {
+      setShowEditPage(false);
+      setTimeout(() => {
+        setCurrentNote(null);
+        setCurrentPage('list');
+      }, 350);
+    }
     setIsBatchMode(false);
     setSelectedIds(new Set());
-  }, []);
+  }, [showEditPage]);
 
   const handleCreateNote = useCallback(() => {
     setCurrentNote(null);
-    // 记录当前分类用于创建笔记，标签页则使用默认分类
     if (activeTab !== 'tags') {
       setCreateCategory(activeTab);
     }
     setCurrentPage('create');
+    setShowEditPage(true);
   }, [activeTab]);
 
   const handleViewNote = useCallback((note: Note) => {
     setCurrentNote(note);
     setCurrentPage('detail');
+    setShowEditPage(true);
   }, []);
 
   const handleBackToList = useCallback(() => {
-    setCurrentPage('list');
-    setCurrentNote(null);
+    setShowEditPage(false);
+    setTimeout(() => {
+      setCurrentNote(null);
+      setCurrentPage('list');
+    }, 350);
   }, []);
 
   const handleSaveNote = useCallback((savedNote: Note) => {
     setCurrentNote(savedNote);
     setCurrentPage('detail');
+    // Stay on edit page, no animation
   }, []);
 
   const handleDeleteNote = useCallback(() => {
-    setCurrentPage('list');
-    setCurrentNote(null);
+    setShowEditPage(false);
+    setTimeout(() => {
+      setCurrentNote(null);
+      setCurrentPage('list');
+    }, 350);
   }, []);
 
   const handleEnterBatchMode = useCallback(() => {
@@ -151,10 +168,56 @@ function App() {
     );
   }
 
-  if (currentPage === 'create' || currentPage === 'detail') {
-    const isCreating = currentPage === 'create';
-    return (
-      <>
+  const isCreating = currentPage === 'create';
+
+  return (
+    <div className="app">
+      {/* List Page - Always rendered */}
+      <div className={`app-page app-page-list ${showEditPage ? 'page-list-behind' : ''}`}>
+        {activeTab !== 'tags' ? (
+          <NoteListPage
+            category={activeTab}
+            notes={notes}
+            isBatchMode={isBatchMode}
+            selectedIds={selectedIds}
+            onEnterBatchMode={handleEnterBatchMode}
+            onExitBatchMode={handleExitBatchMode}
+            onToggleSelect={handleToggleSelect}
+            onSelectAll={handleSelectAll}
+            onClearSelection={handleClearSelection}
+            onViewNote={handleViewNote}
+            onNotesChange={loadNotes}
+            onToast={showToast}
+          />
+        ) : (
+          <TagsPage
+            notes={taggedNotes}
+            isBatchMode={isBatchMode}
+            selectedIds={selectedIds}
+            onEnterBatchMode={handleEnterBatchMode}
+            onExitBatchMode={handleExitBatchMode}
+            onToggleSelect={handleToggleSelect}
+            onSelectAll={handleSelectAll}
+            onClearSelection={handleClearSelection}
+            onViewNote={handleViewNote}
+            onNotesChange={loadNotes}
+            onToast={showToast}
+          />
+        )}
+      </div>
+
+      {/* TabBar - Fixed at bottom, outside of scrollable page */}
+      {!isBatchMode && !showEditPage && (
+        <TabBar activeTab={activeTab} onTabChange={handleTabChange} />
+      )}
+
+      {/* FAB - Fixed at bottom right, outside of scrollable page */}
+      {!isBatchMode && !showEditPage && activeTab !== 'tags' && (
+        <FAB onClick={handleCreateNote} />
+      )}
+
+      {/* Edit Page - Always rendered, visibility controlled by CSS */}
+      <div className={`app-page app-page-edit ${showEditPage ? 'page-edit-visible' : ''}`}>
         <NoteEditPage
           note={currentNote}
           category={createCategory}
@@ -164,45 +227,8 @@ function App() {
           onDelete={handleDeleteNote}
           onToast={showToast}
         />
-        <ToastContainer toasts={toasts} onClose={handleCloseToast} />
-      </>
-    );
-  }
+      </div>
 
-  return (
-    <div className="app">
-      {activeTab !== 'tags' ? (
-        <NoteListPage
-          category={activeTab}
-          notes={notes}
-          isBatchMode={isBatchMode}
-          selectedIds={selectedIds}
-          onEnterBatchMode={handleEnterBatchMode}
-          onExitBatchMode={handleExitBatchMode}
-          onToggleSelect={handleToggleSelect}
-          onSelectAll={handleSelectAll}
-          onClearSelection={handleClearSelection}
-          onCreateNote={handleCreateNote}
-          onViewNote={handleViewNote}
-          onNotesChange={loadNotes}
-          onToast={showToast}
-        />
-      ) : (
-        <TagsPage
-          notes={taggedNotes}
-          isBatchMode={isBatchMode}
-          selectedIds={selectedIds}
-          onEnterBatchMode={handleEnterBatchMode}
-          onExitBatchMode={handleExitBatchMode}
-          onToggleSelect={handleToggleSelect}
-          onSelectAll={handleSelectAll}
-          onClearSelection={handleClearSelection}
-          onViewNote={handleViewNote}
-          onNotesChange={loadNotes}
-          onToast={showToast}
-        />
-      )}
-      {!isBatchMode && <TabBar activeTab={activeTab} onTabChange={handleTabChange} />}
       <ToastContainer toasts={toasts} onClose={handleCloseToast} />
     </div>
   );

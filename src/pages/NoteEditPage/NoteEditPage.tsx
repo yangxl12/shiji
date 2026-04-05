@@ -38,6 +38,17 @@ export function NoteEditPage({
   const originalContent = note?.content ?? '';
   const originalTagColor = note?.tagColor ?? null;
 
+  // Reset form state when note or isCreating changes
+  useEffect(() => {
+    setIsEditing(isCreating);
+    setTitle(note?.title ?? '');
+    setContent(note?.content ?? '');
+    setTagColor(note?.tagColor ?? null);
+    setShowDeleteModal(false);
+    setShowDiscardModal(false);
+    setHasChanges(false);
+  }, [note?.id, isCreating]);
+
   useEffect(() => {
     if (isCreating && contentRef.current) {
       contentRef.current.focus();
