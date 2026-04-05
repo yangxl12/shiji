@@ -38,9 +38,15 @@ function App() {
     if (!isLoading && !dbError) {
       loadNotes();
     }
-  }, [activeTab]);
+  }, [activeTab, loadNotes]);
 
-  const loadNotes = async () => {
+  useEffect(() => {
+    if (!isLoading && !dbError && currentPage === 'list') {
+      loadNotes();
+    }
+  }, [currentPage, isLoading, dbError, loadNotes]);
+
+  const loadNotes = useCallback(async () => {
     try {
       if (activeTab === 'tags') {
         const allTagged = await getAllTaggedNotes();
@@ -52,7 +58,7 @@ function App() {
     } catch (error) {
       showToast(error instanceof Error ? error.message : '加载失败');
     }
-  };
+  }, [activeTab, showToast]);
 
   const showToast = useCallback((message: string) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
@@ -92,13 +98,11 @@ function App() {
   const handleSaveNote = useCallback((savedNote: Note) => {
     setCurrentNote(savedNote);
     setCurrentPage('detail');
-    loadNotes();
   }, []);
 
   const handleDeleteNote = useCallback(() => {
     setCurrentPage('list');
     setCurrentNote(null);
-    loadNotes();
   }, []);
 
   const handleEnterBatchMode = useCallback(() => {
