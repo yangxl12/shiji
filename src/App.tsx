@@ -20,6 +20,25 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
+  const showToast = useCallback((message: string) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    setToasts((prev) => [...prev, { id, message }]);
+  }, []);
+
+  const loadNotes = useCallback(async () => {
+    try {
+      if (activeTab === 'tags') {
+        const allTagged = await getAllTaggedNotes();
+        setTaggedNotes(allTagged);
+      } else {
+        const categoryNotes = await getNotesByCategory(activeTab);
+        setNotes(categoryNotes);
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '加载失败');
+    }
+  }, [activeTab, showToast]);
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -45,25 +64,6 @@ function App() {
       loadNotes();
     }
   }, [currentPage, isLoading, dbError, loadNotes]);
-
-  const loadNotes = useCallback(async () => {
-    try {
-      if (activeTab === 'tags') {
-        const allTagged = await getAllTaggedNotes();
-        setTaggedNotes(allTagged);
-      } else {
-        const categoryNotes = await getNotesByCategory(activeTab);
-        setNotes(categoryNotes);
-      }
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : '加载失败');
-    }
-  }, [activeTab, showToast]);
-
-  const showToast = useCallback((message: string) => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-    setToasts((prev) => [...prev, { id, message }]);
-  }, []);
 
   const handleCloseToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
