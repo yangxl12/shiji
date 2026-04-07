@@ -67,6 +67,8 @@
   flex: 1;
   padding: 16px;
   padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 80px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Pull indicator at top */

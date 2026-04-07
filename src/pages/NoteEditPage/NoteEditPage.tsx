@@ -62,6 +62,18 @@ export function NoteEditPage({
     setHasChanges(titleChanged || contentChanged || tagChanged);
   }, [title, content, tagColor, originalTitle, originalContent, originalTagColor]);
 
+  const handleAutoSave = useCallback(async () => {
+    if (isCreating) return;
+    if (!note) return;
+    if (!hasChanges) return;
+
+    try {
+      await updateNote(note.id, { title, content, tagColor });
+    } catch (error) {
+      console.error('自动保存失败:', error);
+    }
+  }, [isCreating, note, title, content, tagColor, hasChanges]);
+
   useEffect(() => {
     if (!isCreating && !isEditing) return;
 
@@ -80,19 +92,7 @@ export function NoteEditPage({
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [title, content, tagColor]);
-
-  const handleAutoSave = useCallback(async () => {
-    if (isCreating) return;
-    if (!note) return;
-    if (!hasChanges) return;
-
-    try {
-      await updateNote(note.id, { title, content, tagColor });
-    } catch (error) {
-      console.error('自动保存失败:', error);
-    }
-  }, [isCreating, note, title, content, tagColor, hasChanges]);
+  }, [title, content, tagColor, isCreating, isEditing, handleAutoSave]);
 
   const handleSave = useCallback(async () => {
     const trimmedTitle = title.trim();
@@ -234,9 +234,9 @@ export function NoteEditPage({
             )}
           </div>
           <div className="note-edit-view-body">{note.content}</div>
-          <div className="note-edit-view-created">
-            创建于 {formatDate(note.createdAt)}
-          </div>
+        </div>
+        <div className="note-edit-view-created">
+          创建于 {formatDate(note.createdAt)}
         </div>
 
         <div className="note-view-footer">

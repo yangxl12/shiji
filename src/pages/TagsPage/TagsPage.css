@@ -1,11 +1,17 @@
 .tags-page {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 100%;
   background: #FAFAFA;
   padding: 16px;
   padding-top: calc(56px + 56px + 16px);
   padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .tags-page-batch {
@@ -64,6 +70,49 @@
 }
 
 .tags-select-btn:disabled:active {
+  background: none;
+}
+
+/* Header actions container */
+.tags-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Export button */
+.tags-export-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #666666;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tags-export-btn:active {
+  background: #F5F5F5;
+  color: #1A1A1A;
+}
+
+.tags-export-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.tags-export-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tags-export-btn:disabled:active {
   background: none;
 }
 

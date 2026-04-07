@@ -1,8 +1,14 @@
 .note-edit-page {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 100%;
   background: #FAFAFA;
   display: flex;
   flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .note-edit-header {
@@ -72,10 +78,12 @@
 
 .note-edit-content {
   flex: 1;
-  padding: 72px 16px 16px;
+  padding: 72px 16px 80px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .note-edit-input-title {
@@ -156,7 +164,7 @@
 
 .note-edit-view-content {
   flex: 1;
-  padding: 72px 16px 80px;
+  padding: 72px 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -199,8 +207,11 @@
 .note-edit-view-created {
   font-size: 13px;
   color: #BBBBBB;
-  margin-top: auto;
-  padding-top: 16px;
+  padding: 16px;
+  padding-bottom: calc(16px + 56px + env(safe-area-inset-bottom, 0px));
+  background: #FAFAFA;
+  border-top: 1px solid #F0F0F0;
+  flex-shrink: 0;
 }
 
 /* 详情页底部操作栏 */
