@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Note, Category, TabType, ToastMessage } from './types';
-import { initDB, getNotesByCategory, getAllTaggedNotes } from './db';
+import { initDB, getNotesByCategory, getAllTaggedNotes, getAllNotes } from './db';
 import { TabBar, ToastContainer, FAB } from './components';
 import { NoteListPage, TagsPage, NoteEditPage } from './pages';
 import './App.css';
@@ -15,6 +15,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('list');
   const [notes, setNotes] = useState<Note[]>([]);
   const [taggedNotes, setTaggedNotes] = useState<Note[]>([]);
+  const [allNotes, setAllNotes] = useState<Note[]>([]);
   const [currentNote, setCurrentNote] = useState<Note | null>(null);
   const [createCategory, setCreateCategory] = useState<Category>('impromptu');
   const [isBatchMode, setIsBatchMode] = useState(false);
@@ -28,6 +29,10 @@ function App() {
 
   const loadNotes = useCallback(async () => {
     try {
+      // Always load all notes for export
+      const all = await getAllNotes();
+      setAllNotes(all);
+
       if (activeTab === 'tags') {
         const allTagged = await getAllTaggedNotes();
         setTaggedNotes(allTagged);
@@ -192,6 +197,7 @@ function App() {
         ) : (
           <TagsPage
             notes={taggedNotes}
+            allNotes={allNotes}
             isBatchMode={isBatchMode}
             selectedIds={selectedIds}
             onEnterBatchMode={handleEnterBatchMode}

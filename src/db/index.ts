@@ -221,6 +221,14 @@ export async function getAllTaggedNotes(): Promise<Note[]> {
     .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+export async function getAllNotes(): Promise<Note[]> {
+  const db = getDB();
+  const allNotes = await db.getAll(STORE_NAME);
+  return allNotes
+    .filter((note) => !note.isDeleted)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
 export async function updateNoteTagColor(id: string, tagColor: TagColor | null): Promise<Note> {
   const db = getDB();
   const note = await db.get(STORE_NAME, id);

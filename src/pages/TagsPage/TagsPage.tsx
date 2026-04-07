@@ -12,7 +12,8 @@ import { exportNotes } from '../../utils/export';
 import './TagsPage.css';
 
 interface TagsPageProps {
-  notes: Note[];
+  notes: Note[];  // tagged notes for display
+  allNotes: Note[];  // all notes for export
   isBatchMode: boolean;
   selectedIds: Set<string>;
   onEnterBatchMode: () => void;
@@ -41,6 +42,7 @@ const ExportIcon = () => (
 
 export function TagsPage({
   notes,
+  allNotes,
   isBatchMode,
   selectedIds,
   onEnterBatchMode,
@@ -156,9 +158,9 @@ export function TagsPage({
     onEnterBatchMode();
   }, [onEnterBatchMode]);
 
-  // Handle export
+  // Handle export - export ALL notes, not just filtered
   const handleExport = useCallback(async () => {
-    if (filteredNotes.length === 0) {
+    if (allNotes.length === 0) {
       onToast('没有可导出的笔记');
       return;
     }
@@ -166,8 +168,8 @@ export function TagsPage({
     onToast('正在导出...');
     
     try {
-      const result = await exportNotes(filteredNotes, (progress) => {
-        onToast(`正在导出... (${progress.fileIndex}/${Math.ceil(filteredNotes.length / 10)})`);
+      const result = await exportNotes(allNotes, (progress) => {
+        onToast(`正在导出... (${progress.fileIndex}/${Math.ceil(allNotes.length / 10)})`);
       });
       
       if (result.success) {
@@ -179,7 +181,7 @@ export function TagsPage({
       onToast('导出失败，请重试');
       console.error('Export error:', error);
     }
-  }, [filteredNotes, onToast]);
+  }, [allNotes, onToast]);
 
   const getEmptyText = () => {
     if (selectedTag === 'all') {
@@ -197,8 +199,8 @@ export function TagsPage({
             <button
               className="tags-export-btn"
               onClick={handleExport}
-              disabled={filteredNotes.length === 0}
-              title="导出"
+              disabled={allNotes.length === 0}
+              title="导出全部"
             >
               <ExportIcon />
             </button>
