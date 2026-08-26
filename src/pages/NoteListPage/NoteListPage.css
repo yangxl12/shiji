@@ -66,9 +66,14 @@
 .note-list-scroll {
   flex: 1;
   padding: 16px;
-  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 80px);
+  padding-bottom: calc(56px + var(--bottom-safe) + 80px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* 批量模式下顶部操作栏为 fixed 定位，滚动区需让出其高度，避免列表顶到屏幕上沿 */
+.note-list-scroll.batch-mode {
+  padding-top: calc(56px + 16px);
 }
 
 /* Pull indicator at top */

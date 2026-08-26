@@ -89,7 +89,7 @@
   right: 0;
   background: #FFFFFF;
   border-top: 1px solid #F0F0F0;
-  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  padding: 8px 16px calc(8px + var(--bottom-safe));
   display: flex;
   align-items: center;
   justify-content: space-between;

@@ -28,10 +28,8 @@ function App() {
   const listPageRef = useRef<HTMLDivElement>(null);
   const editPageRef = useRef<HTMLDivElement>(null);
   const editPageHandleRef = useRef<NoteEditPageHandle>(null);
-  const swipeHintRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<number | null>(null);
   const showEditPageRef = useRef(showEditPage);
-  const [swipeHintTaught, setSwipeHintTaught] = useState(false);
 
   useEffect(() => {
     showEditPageRef.current = showEditPage;
@@ -99,8 +97,6 @@ function App() {
       clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
-    // 进入编辑页时重置手势教学提示
-    setSwipeHintTaught(false);
     window.history.pushState({ ynote: 'edit' }, '');
   }, []);
 
@@ -138,14 +134,13 @@ function App() {
   }, []);
 
   // 左侧边缘右滑返回手势（跟手拖拽；右侧左滑由系统手势处理）
-  useSwipeBack(editPageRef, listPageRef, swipeHintRef, {
+  useSwipeBack(editPageRef, listPageRef, {
     enabled: showEditPage,
     onBack: async () => {
       const handle = editPageHandleRef.current;
       if (!handle) return false;
       return handle.requestBack();
     },
-    onGestureStart: () => setSwipeHintTaught(true),
   });
 
   const handleTabChange = useCallback((tab: TabType) => {
@@ -303,27 +298,6 @@ function App() {
           onToast={showToast}
         />
       </div>
-
-      {/* 手势返回提示：进入编辑页时短暂教学，拖拽时箭头跟随手指 */}
-      {showEditPage && (
-        <div className="swipe-back-hint" aria-hidden="true">
-          <div
-            className={`swipe-back-hint-circle${swipeHintTaught ? '' : ' swipe-back-hint-teach'}`}
-            ref={swipeHintRef}
-          >
-            <svg viewBox="0 0 24 24" className="swipe-back-hint-icon">
-              <path
-                d="M14.5 5.5 8 12l6.5 6.5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </div>
-      )}
 
       <ToastContainer toasts={toasts} onClose={handleCloseToast} />
     </div>

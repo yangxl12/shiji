@@ -3,7 +3,8 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  /* 使用启动时冻结的安全区变量（见 main.tsx），避免安卓手势条显隐导致高度抖动 */
+  height: calc(56px + var(--bottom-safe));
   background: #FFFFFF;
   border-top: 1px solid #F0F0F0;
   display: flex;

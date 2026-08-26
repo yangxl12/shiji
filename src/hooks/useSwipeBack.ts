@@ -10,8 +10,6 @@ export interface SwipeBackOptions {
    * false 表示返回被取消（如保存失败），手势需将页面恢复原状。
    */
   onBack: () => boolean | Promise<boolean>;
-  /** 手势被接管时触发（用于切换提示 UI 状态） */
-  onGestureStart?: () => void;
 }
 
 /** 左侧边缘触发区宽度（px）。安卓系统返回手势占用最外侧约 20px，二者共存不冲突 */
@@ -40,12 +38,11 @@ const EASE = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 export function useSwipeBack(
   pageRef: RefObject<HTMLDivElement | null>,
   behindRef: RefObject<HTMLDivElement | null>,
-  hintRef: RefObject<HTMLDivElement | null>,
-  { enabled, onBack, onGestureStart }: SwipeBackOptions,
+  { enabled, onBack }: SwipeBackOptions,
 ): void {
-  const optionsRef = useRef({ enabled, onBack, onGestureStart });
+  const optionsRef = useRef({ enabled, onBack });
   useEffect(() => {
-    optionsRef.current = { enabled, onBack, onGestureStart };
+    optionsRef.current = { enabled, onBack };
   });
 
   const stateRef = useRef({
@@ -79,20 +76,6 @@ export function useSwipeBack(
         behind.style.transform = '';
         behind.style.pointerEvents = '';
       }
-      const hint = hintRef.current;
-      if (hint) {
-        hint.style.transition = '';
-        hint.style.opacity = '';
-        hint.style.transform = '';
-        hint.style.animation = '';
-      }
-    };
-
-    const setHintProgress = (p: number) => {
-      const hint = hintRef.current;
-      if (!hint) return;
-      hint.style.opacity = String(Math.min(0.95, p * 3));
-      hint.style.transform = `scale(${0.65 + 0.45 * Math.min(1, p * 2)})`;
     };
 
     const applyDrag = (x: number) => {
@@ -104,7 +87,6 @@ export function useSwipeBack(
         behind.style.opacity = String(0.85 + 0.15 * p);
         behind.style.transform = `scale(${0.98 + 0.02 * p})`;
       }
-      setHintProgress(p);
     };
 
     /** 返回流程被取消时，把页面滑回原位 */
@@ -117,8 +99,6 @@ export function useSwipeBack(
         behind.style.transform = '';
         behind.style.pointerEvents = '';
       }
-      const hint = hintRef.current;
-      if (hint) hint.style.opacity = '0';
       window.setTimeout(clearInlineStyles, RELEASE_DURATION + 40);
     };
 
@@ -141,8 +121,6 @@ export function useSwipeBack(
       if (behind) {
         behind.style.transition = `opacity 0.35s ${EASE}, transform 0.35s ${EASE}`;
       }
-      const hint = hintRef.current;
-      if (hint) hint.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
 
       if (complete) {
         g.finishing = true;
@@ -153,7 +131,6 @@ export function useSwipeBack(
           // 返回流程进行中，避免误触底层列表
           behind.style.pointerEvents = 'none';
         }
-        if (hint) hint.style.opacity = '0';
         void Promise.resolve(optionsRef.current.onBack())
           .then((ok) => {
             if (!ok) restorePage();
@@ -166,7 +143,6 @@ export function useSwipeBack(
           behind.style.opacity = '';
           behind.style.transform = '';
         }
-        if (hint) hint.style.opacity = '0';
         window.setTimeout(clearInlineStyles, RELEASE_DURATION + 40);
       }
     };
@@ -205,12 +181,6 @@ export function useSwipeBack(
         page.style.transition = 'none';
         const behind = behindRef.current;
         if (behind) behind.style.transition = 'none';
-        const hint = hintRef.current;
-        if (hint) {
-          hint.style.animation = 'none';
-          hint.style.transition = 'none';
-        }
-        optionsRef.current.onGestureStart?.();
       }
 
       // 接管后阻止默认行为：页面滚动、浏览器自带的边缘返回手势
@@ -251,7 +221,7 @@ export function useSwipeBack(
       page.removeEventListener('touchend', onTouchEnd);
       page.removeEventListener('touchcancel', onTouchCancel);
     };
-  }, [enabled, pageRef, behindRef, hintRef]);
+  }, [enabled, pageRef, behindRef]);
 
   // 页面关闭（enabled=false）后清理手势遗留的内联样式。
   // effect 在 React 提交后执行，此时可见类已被移除，清理不会引起闪烁。
@@ -273,12 +243,5 @@ export function useSwipeBack(
       behind.style.transform = '';
       behind.style.pointerEvents = '';
     }
-    const hint = hintRef.current;
-    if (hint) {
-      hint.style.transition = '';
-      hint.style.opacity = '';
-      hint.style.transform = '';
-      hint.style.animation = '';
-    }
-  }, [enabled, pageRef, behindRef, hintRef]);
+  }, [enabled, pageRef, behindRef]);
 }

@@ -4,11 +4,24 @@
   box-sizing: border-box;
 }
 
+:root {
+  /* 由 main.tsx 启动时冻结（避免 env() 随安卓手势条显隐动态变化导致抖动） */
+  --safe-area-bottom: 0px;
+  /* 底部安全间距：至少 12px，保证安卓手势条（小横条）不遮挡 TabBar 内容 */
+  --bottom-safe: max(var(--safe-area-bottom), 12px);
+}
+
 html {
   font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   touch-action: manipulation;
+}
+
+html,
+body {
+  /* 禁用浏览器下拉刷新与 overscroll 光晕，避免边缘滚动时底部固定元素被带起抖动 */
+  overscroll-behavior: none;
 }
 
 body {
@@ -103,72 +116,4 @@ body {
   font-size: 14px;
   color: #666666;
   line-height: 1.6;
-}
-
-/* ===== 侧滑返回手势提示 ===== */
-/* 位于屏幕左边缘中部，不拦截任何触摸 */
-.swipe-back-hint {
-  position: fixed;
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  /* 编辑页(2)之上，弹窗/Toast(1000)之下 */
-  z-index: 500;
-  pointer-events: none;
-}
-
-.swipe-back-hint-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(26, 26, 26, 0.75);
-  color: #FFFFFF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  will-change: transform, opacity;
-}
-
-.swipe-back-hint-icon {
-  width: 20px;
-  height: 20px;
-  /* 让箭头在圆内视觉居中 */
-  margin-left: -2px;
-}
-
-/* 进入编辑页时的教学提示：出现并轻微右移示意可滑动方向，随后淡出 */
-.swipe-back-hint-teach {
-  animation: swipeHintTeach 2.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.75s forwards;
-}
-
-@keyframes swipeHintTeach {
-  0% {
-    opacity: 0;
-    transform: translateX(-6px);
-  }
-  15% {
-    opacity: 0.9;
-    transform: translateX(0);
-  }
-  32% {
-    opacity: 0.9;
-    transform: translateX(6px);
-  }
-  46% {
-    opacity: 0.9;
-    transform: translateX(0);
-  }
-  58% {
-    opacity: 0.9;
-    transform: translateX(6px);
-  }
-  70% {
-    opacity: 0.9;
-    transform: translateX(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(0);
-  }
 }

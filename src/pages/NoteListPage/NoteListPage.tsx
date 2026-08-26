@@ -163,7 +163,7 @@ export function NoteListPage({
         </div>
       )}
 
-      <div className="note-list-scroll">
+      <div className={`note-list-scroll${isBatchMode ? ' batch-mode' : ''}`}>
         {notes.length === 0 ? (
           <EmptyState text={categoryInfo.emptyText} />
         ) : (
