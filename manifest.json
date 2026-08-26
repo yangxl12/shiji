@@ -1,0 +1,9 @@
+{
+  "name": "shiji",
+  "short_name": "shiji",
+  "start_url": "https://yangxl12.github.io/shiji/",
+  "display": "standalone",
+  "display_override": ["fullscreen", "minimal-ui", "standalone"],
+  "background_color": "#ffffff",
+  "theme_color": "#00ff00"
+}
