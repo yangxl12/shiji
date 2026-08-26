@@ -1,8 +1,14 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useImperativeHandle } from 'react';
+import type { Ref } from 'react';
 import type { Note, Category, TagColor } from '../../types';
 import { createNote, updateNote, softDeleteNote, updateNoteTagColor } from '../../db';
 import { TagSelector, Modal } from '../../components';
 import './NoteEditPage.css';
+
+export interface NoteEditPageHandle {
+  /** 请求返回（先保存未落盘的修改），resolve 为是否成功返回 */
+  requestBack: () => Promise<boolean>;
+}
 
 interface NoteEditPageProps {
   note?: Note | null;
@@ -12,6 +18,7 @@ interface NoteEditPageProps {
   onSave: (note: Note) => void;
   onDelete?: () => void;
   onToast: (message: string) => void;
+  ref?: Ref<NoteEditPageHandle>;
 }
 
 export function NoteEditPage({
@@ -22,6 +29,7 @@ export function NoteEditPage({
   onSave,
   onDelete,
   onToast,
+  ref,
 }: NoteEditPageProps) {
   const [title, setTitle] = useState(note?.title ?? '');
   const [content, setContent] = useState(note?.content ?? '');
@@ -170,12 +178,17 @@ export function NoteEditPage({
   }, [note, onDelete, onToast]);
 
   // 返回前先保存未落盘的修改
-  const handleBack = useCallback(async () => {
+  const handleBack = useCallback(async (): Promise<boolean> => {
     const saved = await performSave(false);
     if (saved) {
       onBack();
+      return true;
     }
+    return false;
   }, [performSave, onBack]);
+
+  // 供侧滑返回手势调用：与页脚返回按钮走同一套保存逻辑
+  useImperativeHandle(ref, () => ({ requestBack: handleBack }), [handleBack]);
 
   return (
     <div className="note-edit-page">

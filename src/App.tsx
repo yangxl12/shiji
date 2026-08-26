@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Note, Category, TabType, ToastMessage } from './types';
 import { initDB, getNotesByCategory, getAllTaggedNotes, getAllNotes } from './db';
 import { TabBar, ToastContainer, FAB } from './components';
 import { NoteListPage, TagsPage, NoteEditPage } from './pages';
+import type { NoteEditPageHandle } from './pages/NoteEditPage/NoteEditPage';
+import { useSwipeBack } from './hooks/useSwipeBack';
 import './App.css';
 
 type PageType = 'list' | 'create' | 'detail';
@@ -21,6 +23,19 @@ function App() {
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // 二级页面（编辑页）容器与手势返回相关引用
+  const listPageRef = useRef<HTMLDivElement>(null);
+  const editPageRef = useRef<HTMLDivElement>(null);
+  const editPageHandleRef = useRef<NoteEditPageHandle>(null);
+  const swipeHintRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<number | null>(null);
+  const showEditPageRef = useRef(showEditPage);
+  const [swipeHintTaught, setSwipeHintTaught] = useState(false);
+
+  useEffect(() => {
+    showEditPageRef.current = showEditPage;
+  }, [showEditPage]);
 
   const showToast = useCallback((message: string) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
@@ -76,19 +91,72 @@ function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  // ===== 返回手势与浏览器历史的集成 =====
+  // 打开编辑页时压入一条历史记录，使安卓系统返回手势 / 浏览器返回 / 物理返回键
+  // 都会触发 popstate，与应用内返回走同一套滑出动画，互不冲突。
+  const openEditPage = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    // 进入编辑页时重置手势教学提示
+    setSwipeHintTaught(false);
+    window.history.pushState({ ynote: 'edit' }, '');
+  }, []);
+
+  // 统一的关闭动画（由 popstate 触发）
+  const closeEditPage = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setShowEditPage(false);
+    closeTimerRef.current = window.setTimeout(() => {
+      setCurrentNote(null);
+      setCurrentPage('list');
+      closeTimerRef.current = null;
+    }, 350);
+  }, []);
+
+  // 安卓系统返回手势 / 浏览器返回 / history.back() 的统一入口
+  useEffect(() => {
+    const onPopState = () => {
+      if (showEditPageRef.current) {
+        closeEditPage();
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [closeEditPage]);
+
+  // 清理刷新等场景残留的编辑页历史状态
+  useEffect(() => {
+    const state = window.history.state as { ynote?: string } | null;
+    if (state?.ynote) {
+      window.history.replaceState(null, '');
+    }
+  }, []);
+
+  // 左侧边缘右滑返回手势（跟手拖拽；右侧左滑由系统手势处理）
+  useSwipeBack(editPageRef, listPageRef, swipeHintRef, {
+    enabled: showEditPage,
+    onBack: async () => {
+      const handle = editPageHandleRef.current;
+      if (!handle) return false;
+      return handle.requestBack();
+    },
+    onGestureStart: () => setSwipeHintTaught(true),
+  });
+
   const handleTabChange = useCallback((tab: TabType) => {
     setActiveTab(tab);
     // If on edit page, animate back to list first
-    if (showEditPage) {
-      setShowEditPage(false);
-      setTimeout(() => {
-        setCurrentNote(null);
-        setCurrentPage('list');
-      }, 350);
+    if (showEditPageRef.current) {
+      window.history.back();
     }
     setIsBatchMode(false);
     setSelectedIds(new Set());
-  }, [showEditPage]);
+  }, []);
 
   const handleCreateNote = useCallback(() => {
     setCurrentNote(null);
@@ -97,20 +165,18 @@ function App() {
     }
     setCurrentPage('create');
     setShowEditPage(true);
-  }, [activeTab]);
+    openEditPage();
+  }, [activeTab, openEditPage]);
 
   const handleViewNote = useCallback((note: Note) => {
     setCurrentNote(note);
     setCurrentPage('detail');
     setShowEditPage(true);
-  }, []);
+    openEditPage();
+  }, [openEditPage]);
 
   const handleBackToList = useCallback(() => {
-    setShowEditPage(false);
-    setTimeout(() => {
-      setCurrentNote(null);
-      setCurrentPage('list');
-    }, 350);
+    window.history.back();
   }, []);
 
   const handleSaveNote = useCallback((savedNote: Note) => {
@@ -120,11 +186,7 @@ function App() {
   }, []);
 
   const handleDeleteNote = useCallback(() => {
-    setShowEditPage(false);
-    setTimeout(() => {
-      setCurrentNote(null);
-      setCurrentPage('list');
-    }, 350);
+    window.history.back();
   }, []);
 
   const handleEnterBatchMode = useCallback(() => {
@@ -178,7 +240,10 @@ function App() {
   return (
     <div className="app">
       {/* List Page - Always rendered */}
-      <div className={`app-page app-page-list ${showEditPage ? 'page-list-behind' : ''}`}>
+      <div
+        className={`app-page app-page-list ${showEditPage ? 'page-list-behind' : ''}`}
+        ref={listPageRef}
+      >
         {activeTab !== 'tags' ? (
           <NoteListPage
             category={activeTab}
@@ -223,8 +288,12 @@ function App() {
       )}
 
       {/* Edit Page - Always rendered, visibility controlled by CSS */}
-      <div className={`app-page app-page-edit ${showEditPage ? 'page-edit-visible' : ''}`}>
+      <div
+        className={`app-page app-page-edit ${showEditPage ? 'page-edit-visible' : ''}`}
+        ref={editPageRef}
+      >
         <NoteEditPage
+          ref={editPageHandleRef}
           note={currentNote}
           category={createCategory}
           isCreating={isCreating}
@@ -234,6 +303,27 @@ function App() {
           onToast={showToast}
         />
       </div>
+
+      {/* 手势返回提示：进入编辑页时短暂教学，拖拽时箭头跟随手指 */}
+      {showEditPage && (
+        <div className="swipe-back-hint" aria-hidden="true">
+          <div
+            className={`swipe-back-hint-circle${swipeHintTaught ? '' : ' swipe-back-hint-teach'}`}
+            ref={swipeHintRef}
+          >
+            <svg viewBox="0 0 24 24" className="swipe-back-hint-icon">
+              <path
+                d="M14.5 5.5 8 12l6.5 6.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        </div>
+      )}
 
       <ToastContainer toasts={toasts} onClose={handleCloseToast} />
     </div>
