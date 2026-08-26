@@ -30,6 +30,9 @@ function App() {
   const editPageHandleRef = useRef<NoteEditPageHandle>(null);
   const closeTimerRef = useRef<number | null>(null);
   const showEditPageRef = useRef(showEditPage);
+  // 标记返回由应用内触发（返回按钮/侧滑手势），此时保存已在 handleBack 中完成；
+  // 系统/浏览器返回手势触发 popstate 时该标记为 false，需在关闭前保存未落盘的修改。
+  const appBackRef = useRef(false);
 
   useEffect(() => {
     showEditPageRef.current = showEditPage;
@@ -117,7 +120,22 @@ function App() {
   // 安卓系统返回手势 / 浏览器返回 / history.back() 的统一入口
   useEffect(() => {
     const onPopState = () => {
-      if (showEditPageRef.current) {
+      if (!showEditPageRef.current) return;
+      // 应用内返回（返回按钮/侧滑手势）：保存已在 NoteEditPage.handleBack 中完成，
+      // 仅需执行关闭动画
+      if (appBackRef.current) {
+        appBackRef.current = false;
+        closeEditPage();
+        return;
+      }
+      // 系统/浏览器返回手势：先保存未落盘的修改，成功后再关闭，避免丢失数据；
+      // 保存失败时不关闭页面（performSave 内部已 toast 提示），由用户决定后续操作
+      const handle = editPageHandleRef.current;
+      if (handle) {
+        void handle.saveCurrent().then((ok) => {
+          if (ok) closeEditPage();
+        });
+      } else {
         closeEditPage();
       }
     };
@@ -171,6 +189,8 @@ function App() {
   }, [openEditPage]);
 
   const handleBackToList = useCallback(() => {
+    // 标记为应用内触发返回，供 onPopState 区分：此时保存已在 handleBack 中完成
+    appBackRef.current = true;
     window.history.back();
   }, []);
 

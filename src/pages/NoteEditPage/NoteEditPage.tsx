@@ -8,6 +8,8 @@ import './NoteEditPage.css';
 export interface NoteEditPageHandle {
   /** 请求返回（先保存未落盘的修改），resolve 为是否成功返回 */
   requestBack: () => Promise<boolean>;
+  /** 仅保存未落盘的修改，不触发返回。供系统/浏览器返回手势在关闭前保存 */
+  saveCurrent: () => Promise<boolean>;
 }
 
 interface NoteEditPageProps {
@@ -187,8 +189,14 @@ export function NoteEditPage({
     return false;
   }, [performSave, onBack]);
 
-  // 供侧滑返回手势调用：与页脚返回按钮走同一套保存逻辑
-  useImperativeHandle(ref, () => ({ requestBack: handleBack }), [handleBack]);
+  // 仅保存未落盘的修改，不触发返回（用于系统/浏览器返回手势）
+  const saveCurrent = useCallback(async (): Promise<boolean> => {
+    return performSave(false);
+  }, [performSave]);
+
+  // 供侧滑返回手势调用：与页脚返回按钮走同一套保存逻辑；
+  // saveCurrent 供系统/浏览器返回手势在关闭前保存未落盘的修改
+  useImperativeHandle(ref, () => ({ requestBack: handleBack, saveCurrent }), [handleBack, saveCurrent]);
 
   return (
     <div className="note-edit-page">
