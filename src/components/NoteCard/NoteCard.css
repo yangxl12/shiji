@@ -20,6 +20,9 @@
   cursor: pointer;
   position: relative;
   user-select: none;
+  -webkit-user-select: none;
+  /* 长按进入多选：屏蔽 iOS 长按系统呼出菜单 */
+  -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.2s ease-out;
   z-index: 1;

@@ -27,41 +27,6 @@
   color: #1A1A1A;
 }
 
-.note-list-select-btn {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  cursor: pointer;
-  border-radius: 8px;
-  color: #666666;
-  transition: all 0.2s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.note-list-select-btn:active {
-  background: #F5F5F5;
-  color: #1A1A1A;
-}
-
-.note-list-select-btn svg {
-  width: 22px;
-  height: 22px;
-  fill: currentColor;
-}
-
-.note-list-select-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.note-list-select-btn:disabled:active {
-  background: none;
-}
-
 /* Scrollable content area */
 .note-list-scroll {
   flex: 1;

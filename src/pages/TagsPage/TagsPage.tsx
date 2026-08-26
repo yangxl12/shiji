@@ -12,8 +12,8 @@ import { exportNotes } from '../../utils/export';
 import './TagsPage.css';
 
 interface TagsPageProps {
-  notes: Note[];  // tagged notes for display
-  allNotes: Note[];  // all notes for export
+  notes: Note[];  // tagged notes for display (按具体标签筛选时使用)
+  allNotes: Note[];  // all notes for export & "全部"筛选（含未标记笔记）
   isBatchMode: boolean;
   selectedIds: Set<string>;
   onEnterBatchMode: () => void;
@@ -25,13 +25,6 @@ interface TagsPageProps {
   onNotesChange: () => void;
   onToast: (message: string) => void;
 }
-
-// Select/Multi-select icon
-const SelectIcon = () => (
-  <svg viewBox="0 0 24 24">
-    <path d="M3 5h2v2H3zm0 6h2v2H3zm0 6h2v2H3zM7 5h14v2H7zm0 6h14v2H7zm0 6h14v2H7z" />
-  </svg>
-);
 
 // Export icon
 const ExportIcon = () => (
@@ -63,10 +56,11 @@ export function TagsPage({
 
   const filteredNotes = useMemo(() => {
     if (selectedTag === 'all') {
-      return notes;
+      // "全部"展示所有笔记（含未标记笔记）
+      return allNotes;
     }
     return notes.filter((note) => note.tagColor === selectedTag);
-  }, [notes, selectedTag]);
+  }, [notes, allNotes, selectedTag]);
 
   // Close swiped card when clicking outside
   useEffect(() => {
@@ -152,11 +146,12 @@ export function TagsPage({
     }
   }, [swipedNoteId]);
 
-  // Enter batch mode - close all swiped cards
-  const handleEnterBatch = useCallback(() => {
+  // 长按任意笔记进入多选模式，并选中该笔记
+  const handleLongPress = useCallback((noteId: string) => {
     setSwipedNoteId(null);
     onEnterBatchMode();
-  }, [onEnterBatchMode]);
+    onSelectAll([noteId]);
+  }, [onEnterBatchMode, onSelectAll]);
 
   // Handle export - export ALL notes, not just filtered
   const handleExport = useCallback(async () => {
@@ -185,7 +180,7 @@ export function TagsPage({
 
   const getEmptyText = () => {
     if (selectedTag === 'all') {
-      return '还没有被标记的笔记';
+      return '还没有笔记';
     }
     return '暂无此标签的笔记';
   };
@@ -203,14 +198,6 @@ export function TagsPage({
               title="导出全部"
             >
               <ExportIcon />
-            </button>
-            <button
-              className="tags-select-btn"
-              onClick={handleEnterBatch}
-              disabled={filteredNotes.length === 0}
-              title="多选"
-            >
-              <SelectIcon />
             </button>
           </div>
         </div>
@@ -244,6 +231,7 @@ export function TagsPage({
               onToggleSelect={() => handleToggleSelect(note.id)}
               onSwipe={(isSwiped) => handleSwipe(note.id, isSwiped)}
               onDelete={() => handleSwipeDelete(note.id)}
+              onLongPress={() => handleLongPress(note.id)}
             />
           ))
         )}

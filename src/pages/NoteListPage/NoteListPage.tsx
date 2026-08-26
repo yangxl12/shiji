@@ -25,13 +25,6 @@ interface NoteListPageProps {
   onToast: (message: string) => void;
 }
 
-// Select/Multi-select icon
-const SelectIcon = () => (
-  <svg viewBox="0 0 24 24">
-    <path d="M3 5h2v2H3zm0 6h2v2H3zm0 6h2v2H3zM7 5h14v2H7zm0 6h14v2H7zm0 6h14v2H7z" />
-  </svg>
-);
-
 export function NoteListPage({
   category,
   notes,
@@ -130,11 +123,12 @@ export function NoteListPage({
     }
   }, [swipedNoteId]);
 
-  // Enter batch mode - close all swiped cards
-  const handleEnterBatch = useCallback(() => {
+  // 长按任意笔记进入多选模式，并选中该笔记
+  const handleLongPress = useCallback((noteId: string) => {
     setSwipedNoteId(null);
     onEnterBatchMode();
-  }, [onEnterBatchMode]);
+    onSelectAll([noteId]);
+  }, [onEnterBatchMode, onSelectAll]);
 
   return (
     <div ref={containerRef} className="note-list-container">
@@ -152,14 +146,6 @@ export function NoteListPage({
       ) : (
         <div className="note-list-header">
           <h1 className="note-list-title">{categoryInfo.label}</h1>
-          <button
-            className="note-list-select-btn"
-            onClick={handleEnterBatch}
-            disabled={notes.length === 0}
-            title="多选"
-          >
-            <SelectIcon />
-          </button>
         </div>
       )}
 
@@ -178,6 +164,7 @@ export function NoteListPage({
               onToggleSelect={() => onToggleSelect(note.id)}
               onSwipe={(isSwiped) => handleSwipe(note.id, isSwiped)}
               onDelete={() => handleSwipeDelete(note.id)}
+              onLongPress={() => handleLongPress(note.id)}
             />
           ))
         )}

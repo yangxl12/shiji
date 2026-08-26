@@ -13,6 +13,7 @@ interface NoteCardProps {
   onToggleSelect: () => void;
   onSwipe: (isSwiped: boolean) => void;
   onDelete: () => void;
+  onLongPress: () => void;
 }
 
 const getTagColor = (tagColor: TagColor | null): string | null => {
@@ -44,16 +45,33 @@ export function NoteCard({
   onToggleSelect,
   onSwipe,
   onDelete,
+  onLongPress,
 }: NoteCardProps) {
   const [currentOffset, setCurrentOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const touchStartXRef = useRef(0);
+  const touchStartYRef = useRef(0);
   const touchStartTimeRef = useRef(0);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const SWIPE_THRESHOLD = 60;
   const MAX_SWIPE = 144; // 72px * 2 buttons
   const ACTION_WIDTH = 144;
+  const LONG_PRESS_DURATION = 500;
+  const LONG_PRESS_TOLERANCE = 10; // 超过该位移视为滑动/滚动，取消长按
+
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressFiredRef = useRef(false);
+
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  // 组件卸载时清理定时器
+  useEffect(() => clearLongPressTimer, [clearLongPressTimer]);
 
   // Reset offset when swiped state changes externally
   useEffect(() => {
@@ -66,16 +84,37 @@ export function NoteCard({
     if (isBatchMode) return;
 
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     touchStartXRef.current = clientX;
+    touchStartYRef.current = clientY;
     touchStartTimeRef.current = Date.now();
     setIsDragging(true);
-  }, [isBatchMode]);
+
+    // 开始长按计时
+    longPressFiredRef.current = false;
+    clearLongPressTimer();
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTimerRef.current = null;
+      longPressFiredRef.current = true;
+      onLongPress();
+    }, LONG_PRESS_DURATION);
+  }, [isBatchMode, clearLongPressTimer, onLongPress]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
     if (!isDragging || isBatchMode) return;
 
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     const deltaX = clientX - touchStartXRef.current;
+    const deltaY = clientY - touchStartYRef.current;
+
+    // 手指移动超过容差（滑动/滚动意图），取消长按
+    if (
+      longPressTimerRef.current !== null &&
+      (Math.abs(deltaX) > LONG_PRESS_TOLERANCE || Math.abs(deltaY) > LONG_PRESS_TOLERANCE)
+    ) {
+      clearLongPressTimer();
+    }
 
     // Only allow left swipe (negative deltaX)
     if (deltaX < 0) {
@@ -85,9 +124,10 @@ export function NoteCard({
       // Swiping right to close
       setCurrentOffset(Math.max(-ACTION_WIDTH + deltaX, 0));
     }
-  }, [isDragging, isBatchMode, isSwiped]);
+  }, [isDragging, isBatchMode, isSwiped, clearLongPressTimer]);
 
   const handleTouchEnd = useCallback(() => {
+    clearLongPressTimer();
     if (!isDragging) return;
     setIsDragging(false);
 
@@ -103,9 +143,15 @@ export function NoteCard({
       setCurrentOffset(0);
       onSwipe(false);
     }
-  }, [isDragging, currentOffset, onSwipe]);
+  }, [isDragging, currentOffset, onSwipe, clearLongPressTimer]);
 
   const handleClick = useCallback(() => {
+    // 长按已触发，抑制随后的点击（避免误触/重复选中）
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false;
+      return;
+    }
+
     if (isDragging) return;
 
     if (isBatchMode) {
@@ -117,6 +163,11 @@ export function NoteCard({
       onClick();
     }
   }, [isBatchMode, isSwiped, isDragging, onClick, onToggleSelect, onSwipe]);
+
+  // 长按会触发浏览器上下文菜单（桌面右键/移动长按选择），进入多选模式时需屏蔽
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+  }, []);
 
   const handleDeleteClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -163,6 +214,7 @@ export function NoteCard({
           transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
         }}
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
