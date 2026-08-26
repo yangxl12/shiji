@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Note, Category, TagColor } from '../../types';
 import { createNote, updateNote, softDeleteNote, updateNoteTagColor } from '../../db';
 import { TagSelector, Modal } from '../../components';
-import { TAG_COLORS } from '../../utils/constants';
 import './NoteEditPage.css';
 
 interface NoteEditPageProps {
@@ -24,15 +23,17 @@ export function NoteEditPage({
   onDelete,
   onToast,
 }: NoteEditPageProps) {
-  const [isEditing, setIsEditing] = useState(isCreating);
   const [title, setTitle] = useState(note?.title ?? '');
   const [content, setContent] = useState(note?.content ?? '');
   const [tagColor, setTagColor] = useState<TagColor | null>(note?.tagColor ?? null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const autoSaveTimerRef = useRef<number | null>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  // 自动保存创建笔记后，避免重置逻辑覆盖本地输入
+  const stayEditingRef = useRef(false);
+  // 防止自动创建与返回时的保存重复创建笔记
+  const createInFlightRef = useRef(false);
 
   const originalTitle = note?.title ?? '';
   const originalContent = note?.content ?? '';
@@ -40,12 +41,14 @@ export function NoteEditPage({
 
   // Reset form state when note or isCreating changes
   useEffect(() => {
-    setIsEditing(isCreating);
+    if (stayEditingRef.current) {
+      stayEditingRef.current = false;
+      return;
+    }
     setTitle(note?.title ?? '');
     setContent(note?.content ?? '');
     setTagColor(note?.tagColor ?? null);
     setShowDeleteModal(false);
-    setShowDiscardModal(false);
     setHasChanges(false);
   }, [note?.id, isCreating]);
 
@@ -62,29 +65,72 @@ export function NoteEditPage({
     setHasChanges(titleChanged || contentChanged || tagChanged);
   }, [title, content, tagColor, originalTitle, originalContent, originalTagColor]);
 
-  const handleAutoSave = useCallback(async () => {
-    if (isCreating) return;
-    if (!note) return;
-    if (!hasChanges) return;
-
-    try {
-      await updateNote(note.id, { title, content, tagColor });
-    } catch (error) {
-      console.error('自动保存失败:', error);
+  // 统一的保存逻辑：新建时创建笔记并同步到父组件（后续自动转为更新），编辑时更新笔记
+  const performSave = useCallback(async (silent: boolean): Promise<boolean> => {
+    if (isCreating) {
+      if (!title.trim() && !content.trim()) return true;
+      if (!category) return false;
+      if (createInFlightRef.current) return true;
+      createInFlightRef.current = true;
+      try {
+        const { note: newNote, warnings } = await createNote({
+          title,
+          content,
+          category,
+          tagColor,
+        });
+        if (warnings.length > 0 && !silent) {
+          onToast(warnings[0]);
+        }
+        stayEditingRef.current = true;
+        onSave(newNote);
+        return true;
+      } catch (error) {
+        if (silent) {
+          console.error('自动保存失败:', error);
+        } else {
+          onToast(error instanceof Error ? error.message : '保存失败');
+        }
+        return false;
+      } finally {
+        createInFlightRef.current = false;
+      }
     }
-  }, [isCreating, note, title, content, tagColor, hasChanges]);
 
+    if (note) {
+      if (!hasChanges) return true;
+      // 标题和内容均被清空时不保存
+      if (!title.trim() && !content.trim()) return true;
+      try {
+        const { note: updatedNote, warnings } = await updateNote(note.id, { title, content, tagColor });
+        if (warnings.length > 0 && !silent) {
+          onToast(warnings[0]);
+        }
+        onSave(updatedNote);
+        return true;
+      } catch (error) {
+        if (silent) {
+          console.error('自动保存失败:', error);
+        } else {
+          onToast(error instanceof Error ? error.message : '保存失败');
+        }
+        return false;
+      }
+    }
+
+    return true;
+  }, [isCreating, note, category, title, content, tagColor, hasChanges, onSave, onToast]);
+
+  // 自动保存：停止输入 3 秒后触发
   useEffect(() => {
-    if (!isCreating && !isEditing) return;
+    if (!isCreating && !note) return;
 
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
 
     autoSaveTimerRef.current = window.setTimeout(() => {
-      if (title.trim() || content.trim()) {
-        handleAutoSave();
-      }
+      performSave(true);
     }, 3000);
 
     return () => {
@@ -92,50 +138,7 @@ export function NoteEditPage({
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [title, content, tagColor, isCreating, isEditing, handleAutoSave]);
-
-  const handleSave = useCallback(async () => {
-    const trimmedTitle = title.trim();
-    const trimmedContent = content.trim();
-
-    if (!trimmedTitle && !trimmedContent) {
-      onToast('请输入标题或内容');
-      return;
-    }
-
-    try {
-      if (isCreating) {
-        if (!category) {
-          onToast('分类错误');
-          return;
-        }
-        const { note: newNote, warnings } = await createNote({
-          title,
-          content,
-          category,
-          tagColor,
-        });
-        if (warnings.length > 0) {
-          onToast(warnings[0]);
-        } else {
-          onToast('已保存');
-        }
-        onSave(newNote);
-        setIsEditing(false);
-      } else if (note) {
-        const { note: updatedNote, warnings } = await updateNote(note.id, { title, content, tagColor });
-        if (warnings.length > 0) {
-          onToast(warnings[0]);
-        } else {
-          onToast('已保存');
-        }
-        onSave(updatedNote);
-        setIsEditing(false);
-      }
-    } catch (error) {
-      onToast(error instanceof Error ? error.message : '保存失败');
-    }
-  }, [isCreating, note, category, title, content, tagColor, onSave, onToast]);
+  }, [title, content, tagColor, isCreating, note, performSave]);
 
   const handleTagChange = useCallback(async (newTag: TagColor | null) => {
     setTagColor(newTag);
@@ -166,123 +169,13 @@ export function NoteEditPage({
     setShowDeleteModal(false);
   }, [note, onDelete, onToast]);
 
-  const handleBack = useCallback(() => {
-    if (isCreating) {
-      if (title.trim() || content.trim()) {
-        setShowDiscardModal(true);
-      } else {
-        onBack();
-      }
-    } else if (isEditing) {
-      if (hasChanges) {
-        setShowDiscardModal(true);
-      } else {
-        setIsEditing(false);
-      }
-    } else {
+  // 返回前先保存未落盘的修改
+  const handleBack = useCallback(async () => {
+    const saved = await performSave(false);
+    if (saved) {
       onBack();
     }
-  }, [isCreating, isEditing, hasChanges, title, content, onBack]);
-
-  const handleConfirmDiscard = useCallback(() => {
-    if (isCreating) {
-      onBack();
-    } else if (isEditing) {
-      setTitle(originalTitle);
-      setContent(originalContent);
-      setTagColor(originalTagColor);
-      setIsEditing(false);
-    }
-    setShowDiscardModal(false);
-  }, [isCreating, isEditing, originalTitle, originalContent, originalTagColor, onBack]);
-
-  const handleSaveAndExit = useCallback(async () => {
-    if (isCreating) {
-      if (title.trim() || content.trim()) {
-        await handleSave();
-      } else {
-        onBack();
-      }
-    } else if (isEditing) {
-      await handleSave();
-      setIsEditing(false);
-    }
-    setShowDiscardModal(false);
-  }, [isCreating, isEditing, title, content, handleSave, onBack]);
-
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-  };
-
-  if (!isEditing && note) {
-    const tagInfo = note.tagColor ? TAG_COLORS.find(t => t.key === note.tagColor) : null;
-
-    return (
-      <div className="note-edit-page">
-        <div className="note-edit-header">
-          <div className="note-edit-actions" />
-          <h1 className="note-edit-title">笔记详情</h1>
-          <div className="note-edit-actions" />
-        </div>
-
-        <div className="note-edit-view-content">
-          <div className="note-edit-view-header">
-            <h2 className="note-edit-view-title">{note.title || '(无标题)'}</h2>
-            {tagInfo && (
-              <div className="note-view-tag-dot" style={{ backgroundColor: tagInfo.value }} />
-            )}
-          </div>
-          <div className="note-edit-view-body">{note.content}</div>
-        </div>
-        <div className="note-edit-view-created">
-          创建于 {formatDate(note.createdAt)}
-        </div>
-
-        <div className="note-view-footer">
-          <button
-            className="note-view-action-btn"
-            onClick={handleBack}
-            title="返回"
-          >
-            <svg viewBox="0 0 24 24">
-              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
-            </svg>
-          </button>
-          <div style={{ flex: 1 }} />
-          <button
-            className="note-view-action-btn note-view-action-btn-delete"
-            onClick={() => setShowDeleteModal(true)}
-            title="删除"
-          >
-            <svg viewBox="0 0 24 24">
-              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-            </svg>
-          </button>
-          <button
-            className="note-view-action-btn"
-            onClick={() => setIsEditing(true)}
-            title="编辑"
-          >
-            <svg viewBox="0 0 24 24">
-              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-            </svg>
-          </button>
-        </div>
-
-        <Modal
-          isOpen={showDeleteModal}
-          title="确定删除这条笔记？"
-          content="删除后无法恢复"
-          cancelText="取消"
-          confirmText="删除"
-          isDanger={true}
-          onCancel={() => setShowDeleteModal(false)}
-          onConfirm={handleDelete}
-        />
-      </div>
-    );
-  }
+  }, [performSave, onBack]);
 
   return (
     <div className="note-edit-page">
@@ -302,7 +195,6 @@ export function NoteEditPage({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <div className="note-edit-divider" />
         <textarea
           ref={contentRef}
           className="note-edit-input-content"
@@ -322,10 +214,19 @@ export function NoteEditPage({
             <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
           </svg>
         </button>
+        <div style={{ flex: 1 }} />
         <TagSelector selectedTag={tagColor} onChange={handleTagChange} />
-        <button className="note-edit-save-btn" onClick={handleSave}>
-          保存
-        </button>
+        {!isCreating && (
+          <button
+            className="note-view-action-btn note-view-action-btn-delete"
+            onClick={() => setShowDeleteModal(true)}
+            title="删除"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+            </svg>
+          </button>
+        )}
       </div>
 
       <Modal
@@ -337,16 +238,6 @@ export function NoteEditPage({
         isDanger={true}
         onCancel={() => setShowDeleteModal(false)}
         onConfirm={handleDelete}
-      />
-
-      <Modal
-        isOpen={showDiscardModal}
-        title={isCreating ? '是否保存草稿？' : '有未保存的修改，是否保存？'}
-        content=""
-        cancelText="不保存"
-        confirmText="保存"
-        onCancel={handleConfirmDiscard}
-        onConfirm={handleSaveAndExit}
       />
     </div>
   );
