@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import './Modal.css';
 
 export interface ModalProps {
@@ -23,7 +24,9 @@ export function Modal({
 }: ModalProps) {
   if (!isOpen) return null;
 
-  return (
+  // Portal 到 body：避免被页面容器的 transform 裁剪为包含块，
+  // 保证桌面端内容列布局下遮罩仍覆盖整个视口
+  return createPortal(
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h3 className="modal-title">{title}</h3>
@@ -40,6 +43,7 @@ export function Modal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

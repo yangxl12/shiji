@@ -168,3 +168,15 @@
 .note-card-action-cancel:active {
   background: #666666;
 }
+
+/* ===== 桌面端适配（≥768px）：网格布局下间距由 gap 控制，补充悬停反馈 ===== */
+
+@media (min-width: 768px) {
+  .note-card-wrapper {
+    margin-bottom: 0;
+  }
+
+  .note-card:hover {
+    background: #F7F7F8;
+  }
+}

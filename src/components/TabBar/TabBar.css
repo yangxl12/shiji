@@ -53,3 +53,10 @@
 .tab-active {
   color: #1A1A1A;
 }
+
+/* 桌面端：悬停反馈 */
+@media (min-width: 768px) {
+  .tab-item:not(.tab-active):hover {
+    color: #555555;
+  }
+}

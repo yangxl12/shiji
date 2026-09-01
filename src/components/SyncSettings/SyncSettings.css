@@ -250,3 +250,42 @@
     transform: translateY(0);
   }
 }
+
+/* ===== 桌面端适配（≥768px）：按钮对齐内容列，面板改为居中对话框 ===== */
+
+@media (min-width: 768px) {
+  /* 状态按钮贴住内容列右上角（列外时退回屏幕右上角） */
+  .sync-status-btn {
+    right: max(0px, calc(50vw - var(--app-max-width) / 2));
+  }
+
+  .sync-overlay {
+    align-items: center;
+  }
+
+  .sync-sheet {
+    width: min(440px, calc(100vw - 48px));
+    border-radius: 16px;
+    padding: 20px 24px 24px;
+    animation: syncDialogIn 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .sync-close-btn:hover svg {
+    opacity: 0.7;
+  }
+
+  .sync-btn:hover {
+    opacity: 0.85;
+  }
+}
+
+@keyframes syncDialogIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

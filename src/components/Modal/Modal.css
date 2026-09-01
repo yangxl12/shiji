@@ -90,3 +90,15 @@
     transform: scale(1);
   }
 }
+
+/* ===== 桌面端适配（≥768px）：稍宽的对话框与悬停反馈 ===== */
+
+@media (min-width: 768px) {
+  .modal {
+    width: 320px;
+  }
+
+  .modal-btn:hover {
+    opacity: 0.85;
+  }
+}

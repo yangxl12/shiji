@@ -131,3 +131,31 @@
   background: #FFF2F2;
   color: #E54D42;
 }
+
+/* ===== 桌面端适配（≥768px）：加大留白与字号，补充悬停反馈 ===== */
+
+@media (min-width: 768px) {
+  .note-edit-content {
+    padding: 80px 48px 96px;
+    gap: 20px;
+  }
+
+  .note-edit-input-title {
+    font-size: 26px;
+  }
+
+  .note-edit-input-content {
+    font-size: 17px;
+    line-height: 1.9;
+  }
+
+  .note-view-action-btn:hover {
+    background: #F5F5F5;
+    color: #1A1A1A;
+  }
+
+  .note-view-action-btn-delete:hover {
+    background: #FFF2F2;
+    color: #E54D42;
+  }
+}
