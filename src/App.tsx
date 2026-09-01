@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Note, Category, TabType, ToastMessage } from './types';
 import { initDB, setDataChangeListener, getNotesByCategory, getAllTaggedNotes, getAllNotes } from './db';
-import { TabBar, ToastContainer, FAB, SyncSettings, type SyncStatus } from './components';
+import { TabBar, ToastContainer, FAB, SyncSettings, ThemeToggle, type SyncStatus } from './components';
 import { NoteListPage, TagsPage, NoteEditPage } from './pages';
 import type { NoteEditPageHandle } from './pages/NoteEditPage/NoteEditPage';
 import { useSwipeBack } from './hooks/useSwipeBack';
+import { useTheme } from './hooks/useTheme';
 import { getSyncConfig } from './sync/gist';
 import { runSync, pushOnly } from './sync/sync';
 import { SYNC_PUSH_DEBOUNCE } from './utils/constants';
@@ -26,6 +27,9 @@ function App() {
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // ===== 主题（浅色 / 深色 / 跟随系统） =====
+  const { themeMode, setThemeMode } = useTheme();
 
   // ===== 多端同步（GitHub Gist） =====
   const [showSyncSettings, setShowSyncSettings] = useState(false);
@@ -433,6 +437,11 @@ function App() {
       {/* FAB - Fixed at bottom right, outside of scrollable page */}
       {!isBatchMode && !showEditPage && activeTab !== 'tags' && (
         <FAB onClick={handleCreateNote} />
+      )}
+
+      {/* 主题切换按钮 - 右上角（同步按钮左侧），批量模式/编辑页隐藏 */}
+      {!isBatchMode && !showEditPage && (
+        <ThemeToggle mode={themeMode} onChange={setThemeMode} onToast={showToast} />
       )}
 
       {/* 同步状态按钮 - 笔记列表页右上角（标签页右上角已有导出按钮，不重复放置） */}

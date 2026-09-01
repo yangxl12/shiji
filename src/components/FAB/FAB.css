@@ -1,4 +1,4 @@
-/* ===== FAB：墨色晶体 ===== */
+/* ===== FAB：墨色晶体（圆形） ===== */
 
 .fab {
   position: fixed;
@@ -6,7 +6,7 @@
   bottom: calc(var(--nav-height) + var(--safe-area-bottom) + var(--nav-offset) + 20px);
   width: 56px;
   height: 56px;
-  border-radius: var(--radius-card);
+  border-radius: 50%;
   border: none;
   display: flex;
   align-items: center;
@@ -59,6 +59,12 @@
   height: 24px;
   /* 墨底纸字 / 纸底墨字：图标色即页面底色 */
   color: var(--bg);
+  /* 按压时笔尖轻点（微旋 + 下沉），如落笔书写 */
+  transition: transform var(--dur-base) var(--ease-spring);
+}
+
+.fab:active .fab-icon {
+  transform: rotate(-12deg) translateY(1px);
 }
 
 .fab-icon svg {

@@ -1,0 +1,61 @@
+/* ===== 主题切换按钮：右上角（同步按钮左侧） ===== */
+
+.theme-toggle-btn {
+  position: fixed;
+  top: 0;
+  /* 与 sync-status-btn 同规格，固定在其左侧一档 */
+  right: 56px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 100;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.theme-toggle-icon {
+  display: flex;
+  animation: theme-icon-in var(--dur-base) var(--ease-spring);
+}
+
+@keyframes theme-icon-in {
+  from {
+    transform: scale(0.4) rotate(-90deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.theme-toggle-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--ink-400);
+  transition: fill var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+}
+
+.theme-toggle-btn:active svg {
+  transform: scale(0.88);
+}
+
+/* hover：仅鼠标设备 */
+@media (hover: hover) and (pointer: fine) {
+  .theme-toggle-btn:hover svg {
+    fill: var(--ink-900);
+    transform: scale(1.08);
+  }
+}
+
+/* ===== 桌面端适配（≥768px）：贴住内容列右上角（同步按钮左侧） ===== */
+
+@media (min-width: 768px) {
+  .theme-toggle-btn {
+    right: max(56px, calc(50vw - var(--app-max-width) / 2 + 56px));
+  }
+}

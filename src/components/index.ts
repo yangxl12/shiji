@@ -8,3 +8,4 @@ export { BatchActionBar } from './BatchActionBar/BatchActionBar';
 export { TagChipNav } from './TagChipNav/TagChipNav';
 export { EmptyState } from './EmptyState/EmptyState';
 export { SyncSettings, type SyncStatus } from './SyncSettings/SyncSettings';
+export { ThemeToggle } from './ThemeToggle/ThemeToggle';

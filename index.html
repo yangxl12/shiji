@@ -7,8 +7,7 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <link rel="manifest" href="./manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#F7F7FA" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#121216" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F7F7FA" />
     <meta name="background-color" content="#F7F7FA" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -16,6 +15,21 @@
     <meta name="apple-mobile-web-app-title" content="拾记" />
     <meta name="description" content="一款零联网、零注册、零服务器的极简本地笔记工具" />
     <title>拾记</title>
+    <script type="text/javascript">
+      // 主题预置：在 CSS 生效前根据用户偏好/系统设置写入 data-theme，避免暗色用户首屏闪白
+      (function() {
+        try {
+          var mode = localStorage.getItem('ynote-theme') || 'system';
+          var dark = mode === 'dark' ||
+            (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.content = dark ? '#121216' : '#F7F7FA';
+        } catch (e) {
+          document.documentElement.dataset.theme = 'light';
+        }
+      })();
+    </script>
     <script type="text/javascript">
       // Single Page Apps for GitHub Pages
       // MIT License
