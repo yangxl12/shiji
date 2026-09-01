@@ -55,6 +55,8 @@ export function useSwipeBack(
     lastT: 0,
     velocity: 0,
     baseLeft: 0,
+    /** 页面布局位置（未 transform 时）相对视口的左偏移：移动端全屏为 0，桌面端居中内容列非 0 */
+    layoutLeft: 0,
     curX: 0,
     width: 1,
   });
@@ -80,7 +82,8 @@ export function useSwipeBack(
 
     const applyDrag = (x: number) => {
       g.curX = x;
-      page.style.transform = `translateX(${x}px)`;
+      // translateX 相对页面布局位置，需扣除内容列相对视口的左偏移
+      page.style.transform = `translateX(${x - g.layoutLeft}px)`;
       const p = x / g.width;
       const behind = behindRef.current;
       if (behind) {
