@@ -17,6 +17,26 @@ interface ShiJiDB extends DBSchema {
 
 let db: IDBPDatabase<ShiJiDB> | null = null;
 
+// ===== 笔记排序：标记颜色优先级（红 > 橙 > 黄 > 灰 > 无标记），同优先级按创建时间降序 =====
+
+const TAG_COLOR_PRIORITY: Record<TagColor, number> = {
+  red: 0,
+  orange: 1,
+  yellow: 2,
+  gray: 3,
+};
+
+const UNTAGGED_PRIORITY = 4;
+
+function compareNotes(a: Note, b: Note): number {
+  const priorityA = a.tagColor ? TAG_COLOR_PRIORITY[a.tagColor] : UNTAGGED_PRIORITY;
+  const priorityB = b.tagColor ? TAG_COLOR_PRIORITY[b.tagColor] : UNTAGGED_PRIORITY;
+  if (priorityA !== priorityB) {
+    return priorityA - priorityB;
+  }
+  return b.createdAt - a.createdAt;
+}
+
 // ===== 数据变更通知（供同步模块监听本地写入，触发防抖推送） =====
 
 type DataChangeListener = () => void;
@@ -218,7 +238,7 @@ export async function getNotesByCategory(category: Category): Promise<Note[]> {
   const allNotes = await index.getAll(category);
   return allNotes
     .filter((note) => !note.isDeleted)
-    .sort((a, b) => b.updatedAt - a.updatedAt);
+    .sort(compareNotes);
 }
 
 export async function getNotesByTagColor(tagColor: TagColor): Promise<Note[]> {
@@ -227,7 +247,7 @@ export async function getNotesByTagColor(tagColor: TagColor): Promise<Note[]> {
   const allNotes = await index.getAll(tagColor);
   return allNotes
     .filter((note) => !note.isDeleted)
-    .sort((a, b) => b.updatedAt - a.updatedAt);
+    .sort(compareNotes);
 }
 
 export async function getAllTaggedNotes(): Promise<Note[]> {
@@ -235,7 +255,7 @@ export async function getAllTaggedNotes(): Promise<Note[]> {
   const allNotes = await db.getAll(STORE_NAME);
   return allNotes
     .filter((note) => !note.isDeleted && note.tagColor !== null)
-    .sort((a, b) => b.updatedAt - a.updatedAt);
+    .sort(compareNotes);
 }
 
 export async function getAllNotes(): Promise<Note[]> {
@@ -243,7 +263,7 @@ export async function getAllNotes(): Promise<Note[]> {
   const allNotes = await db.getAll(STORE_NAME);
   return allNotes
     .filter((note) => !note.isDeleted)
-    .sort((a, b) => b.updatedAt - a.updatedAt);
+    .sort(compareNotes);
 }
 
 export async function updateNoteTagColor(id: string, tagColor: TagColor | null): Promise<Note> {
