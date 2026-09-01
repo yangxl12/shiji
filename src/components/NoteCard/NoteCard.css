@@ -4,7 +4,6 @@
 }
 
 .note-card {
-  flex: 1;
   background: #FFFFFF;
   border-radius: 12px;
   padding: 16px;
@@ -112,6 +111,23 @@
 @media (min-width: 768px) {
   .note-card-wrapper {
     margin-bottom: 0;
+  }
+
+  /* 统一卡片高度：标题置顶、时间沉底，避免无标题卡片下方留白 */
+  .note-card {
+    display: flex;
+    flex-direction: column;
+    height: 128px;
+    overflow: hidden;
+  }
+
+  .note-card-content {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .note-card-time {
+    margin-top: auto;
   }
 
   .note-card:hover {
