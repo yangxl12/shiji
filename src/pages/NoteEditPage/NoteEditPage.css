@@ -1,7 +1,8 @@
 .note-edit-page {
   height: 100%;
   min-height: 100%;
-  background: #FAFAFA;
+  /* 底色与环境光由外层 .app-page-edit 提供 */
+  background: transparent;
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -11,25 +12,47 @@
   bottom: 0;
 }
 
+/* 顶栏：置顶透明，滚动后玻璃化（.is-scrolled 由 useScrollState 驱动） */
 .note-edit-header {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   height: 56px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #F0F0F0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   z-index: 99;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-base) var(--ease-standard);
+}
+
+.note-edit-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--glass-nav-bg);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-standard);
+  pointer-events: none;
+}
+
+.note-edit-header.is-scrolled::before {
+  opacity: 1;
+}
+
+.note-edit-header.is-scrolled {
+  border-bottom-color: var(--hairline);
 }
 
 .note-edit-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #1A1A1A;
+  font: var(--text-title);
+  color: var(--ink-900);
 }
 
 .note-edit-actions {
@@ -49,27 +72,24 @@
 }
 
 .note-edit-input-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1A1A1A;
+  font: var(--text-title-xl);
+  color: var(--ink-900);
   border: none;
   background: none;
   outline: none;
   padding: 0;
-  line-height: 1.4;
   font-family: inherit;
 }
 
 .note-edit-input-title::placeholder {
-  color: #CCCCCC;
+  color: var(--ink-300);
   font-weight: 400;
 }
 
 .note-edit-input-content {
   flex: 1;
-  font-size: 16px;
-  color: #333333;
-  line-height: 1.8;
+  font: var(--text-body);
+  color: var(--ink-700);
   border: none;
   background: none;
   outline: none;
@@ -79,22 +99,45 @@
 }
 
 .note-edit-input-content::placeholder {
-  color: #CCCCCC;
+  color: var(--ink-300);
 }
 
+/* 底栏：透明置底，滚动后玻璃化（与顶栏共享 is-scrolled） */
 .note-edit-footer {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: #FFFFFF;
-  border-top: 1px solid #F0F0F0;
   padding: 8px 16px calc(8px + var(--bottom-safe));
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   z-index: 99;
+  border-top: 1px solid transparent;
+  transition: border-color var(--dur-base) var(--ease-standard);
+}
+
+.note-edit-footer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--glass-nav-bg);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-standard);
+  pointer-events: none;
+}
+
+.note-edit-footer.is-scrolled::before {
+  opacity: 1;
+}
+
+.note-edit-footer.is-scrolled {
+  border-top-color: var(--hairline);
 }
 
 .note-view-action-btn {
@@ -105,16 +148,18 @@
   justify-content: center;
   background: none;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
-  color: #888888;
-  transition: all 0.15s;
+  color: var(--ink-500);
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
   -webkit-tap-highlight-color: transparent;
 }
 
 .note-view-action-btn:active {
-  background: #F5F5F5;
-  color: #1A1A1A;
+  background: var(--surface-2);
+  color: var(--ink-900);
 }
 
 .note-view-action-btn svg {
@@ -124,12 +169,12 @@
 }
 
 .note-view-action-btn-delete {
-  color: #BBBBBB;
+  color: var(--ink-300);
 }
 
 .note-view-action-btn-delete:active {
-  background: #FFF2F2;
-  color: #E54D42;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 /* ===== 桌面端适配（≥768px）：加大留白与字号，补充悬停反馈 ===== */
@@ -141,21 +186,24 @@
   }
 
   .note-edit-input-title {
-    font-size: 26px;
+    font: var(--text-display);
   }
 
   .note-edit-input-content {
     font-size: 17px;
     line-height: 1.9;
   }
+}
 
+/* hover：仅鼠标设备 */
+@media (hover: hover) and (pointer: fine) {
   .note-view-action-btn:hover {
-    background: #F5F5F5;
-    color: #1A1A1A;
+    background: var(--surface-2);
+    color: var(--ink-900);
   }
 
   .note-view-action-btn-delete:hover {
-    background: #FFF2F2;
-    color: #E54D42;
+    background: var(--danger-soft);
+    color: var(--danger);
   }
 }

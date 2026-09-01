@@ -10,29 +10,48 @@
   height: 24px;
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.15s;
   position: relative;
   -webkit-tap-highlight-color: transparent;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    box-shadow var(--dur-fast) var(--ease-standard);
 }
 
 .tag-option:active {
   transform: scale(0.85);
 }
 
+/* 选中态：色环 + 白隙环（白隙取页面底色，暗色模式自动适配） */
 .tag-option-selected {
-  box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5px currentColor;
+  box-shadow:
+    0 0 0 3px var(--bg),
+    0 0 0 5px currentColor;
   transform: scale(1.1);
 }
 
+/* 外圈描边环：弹性扩散入场，替代瞬间跳变 */
 .tag-option-selected::after {
   content: '';
   position: absolute;
   inset: -5px;
   border-radius: 50%;
-  border: 2px solid #FFFFFF;
+  border: 2px solid var(--bg);
+  animation: tag-ring-pop 240ms var(--ease-spring);
 }
 
+@keyframes tag-ring-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ✓ 勾画入场 */
 .tag-option-selected::before {
   content: '✓';
   position: absolute;
@@ -42,6 +61,18 @@
   justify-content: center;
   font-size: 12px;
   font-weight: bold;
-  color: #FFFFFF;
+  color: var(--bg);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  animation: tag-check-in 200ms var(--ease-decelerate);
+}
+
+@keyframes tag-check-in {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }

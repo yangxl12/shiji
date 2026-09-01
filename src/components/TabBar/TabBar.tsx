@@ -55,6 +55,8 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
         return (
           <div
             key={tab}
+            role="tab"
+            aria-selected={isActive}
             className={`tab-item ${isActive ? 'tab-active' : ''}`}
             onClick={() => onTabChange(tab)}
           >

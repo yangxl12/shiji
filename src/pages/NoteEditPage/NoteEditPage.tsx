@@ -3,6 +3,7 @@ import type { Ref } from 'react';
 import type { Note, Category, TagColor } from '../../types';
 import { createNote, updateNote, softDeleteNote, updateNoteTagColor } from '../../db';
 import { TagSelector, Modal } from '../../components';
+import { useScrollState } from '../../hooks/useScrollState';
 import './NoteEditPage.css';
 
 export interface NoteEditPageHandle {
@@ -40,6 +41,8 @@ export function NoteEditPage({
   const [hasChanges, setHasChanges] = useState(false);
   const autoSaveTimerRef = useRef<number | null>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  // 滚动联动：正文 textarea 是编辑页实际的滚动元素，顶/底栏据此玻璃化（纯表现层）
+  const isScrolled = useScrollState(contentRef);
   // 自动保存创建笔记后，避免重置逻辑覆盖本地输入
   const stayEditingRef = useRef(false);
   // 防止自动创建与返回时的保存重复创建笔记
@@ -200,7 +203,7 @@ export function NoteEditPage({
 
   return (
     <div className="note-edit-page">
-      <div className="note-edit-header">
+      <div className={`note-edit-header${isScrolled ? ' is-scrolled' : ''}`}>
         <div className="note-edit-actions" />
         <h1 className="note-edit-title">
           {isCreating ? '新建笔记' : '编辑笔记'}
@@ -225,7 +228,7 @@ export function NoteEditPage({
         />
       </div>
 
-      <div className="note-edit-footer">
+      <div className={`note-edit-footer${isScrolled ? ' is-scrolled' : ''}`}>
         <button
           className="note-view-action-btn"
           onClick={handleBack}

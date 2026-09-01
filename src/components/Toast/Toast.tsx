@@ -15,7 +15,7 @@ export function Toast({ message, onClose }: ToastProps) {
       setIsExiting(true);
       setTimeout(() => {
         onClose(message.id);
-      }, 200);
+      }, 240); // 与 --dur-base 对齐
     }, message.duration ?? 2000);
 
     return () => clearTimeout(timer);

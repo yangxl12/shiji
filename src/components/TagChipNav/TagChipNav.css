@@ -6,6 +6,9 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   padding-right: 8px;
+  /* 右缘线性渐隐：提示可继续滑动（避免内容被硬切断） */
+  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
 }
 
 .tag-chip-nav::-webkit-scrollbar {
@@ -18,20 +21,24 @@
   gap: 4px;
   height: 28px;
   padding: 0 10px;
-  border-radius: 14px;
-  background: #F5F5F5;
-  color: #666666;
+  border-radius: var(--radius-chip);
+  background: var(--surface-2);
+  color: var(--ink-500);
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s;
   -webkit-tap-highlight-color: transparent;
   border: 1px solid transparent;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-standard);
 }
 
 .tag-chip:active {
-  opacity: 0.8;
+  transform: scale(0.96);
 }
 
 .tag-chip-dot {
@@ -40,31 +47,48 @@
   border-radius: 50%;
 }
 
+/* 选中 chip：G3 点缀玻璃 + 原色系描边 */
 .tag-chip-selected {
-  background: #FFFFFF;
-  color: #1A1A1A;
+  background: var(--glass-chip-bg);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--ink-900);
 }
 
 .tag-chip-selected.tag-chip-red {
-  border-color: #E54D42;
+  border-color: var(--tag-red);
 }
 
 .tag-chip-selected.tag-chip-orange {
-  border-color: #F37B1D;
+  border-color: var(--tag-orange);
 }
 
 .tag-chip-selected.tag-chip-yellow {
-  border-color: #FBBF24;
+  border-color: var(--tag-yellow);
 }
 
 .tag-chip-selected.tag-chip-gray {
-  border-color: #8C8C8C;
+  border-color: var(--tag-gray);
 }
 
 .tag-chip-dot-all {
-  background: linear-gradient(135deg, #E54D42 25%, #F37B1D 25%, #F37B1D 50%, #FBBF24 50%, #FBBF24 75%, #8C8C8C 75%);
+  background: linear-gradient(
+    135deg,
+    var(--tag-red) 25%,
+    var(--tag-orange) 25%,
+    var(--tag-orange) 50%,
+    var(--tag-yellow) 50%,
+    var(--tag-yellow) 75%,
+    var(--tag-gray) 75%
+  );
 }
 
 .tag-chip-selected.tag-chip-all {
-  border-color: #1A1A1A;
+  border-color: var(--ink-900);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tag-chip:not(.tag-chip-selected):hover {
+    color: var(--ink-700);
+  }
 }

@@ -19,24 +19,24 @@
 .sync-status-btn svg {
   width: 20px;
   height: 20px;
-  fill: #999999;
-  transition: fill 0.2s;
+  fill: var(--ink-400);
+  transition: fill var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
 }
 
 .sync-status-btn:active svg {
-  opacity: 0.7;
+  transform: scale(0.88);
 }
 
 .sync-status-btn-ok svg {
-  fill: #1A1A1A;
+  fill: var(--ink-900);
 }
 
 .sync-status-btn-error svg {
-  fill: #E54D42;
+  fill: var(--danger);
 }
 
 .sync-status-btn-syncing svg {
-  fill: #666666;
+  fill: var(--ink-500);
   animation: sync-rotate 1s linear infinite;
 }
 
@@ -49,7 +49,13 @@
   }
 }
 
-/* ===== 同步设置面板（底部弹层） ===== */
+@media (hover: hover) and (pointer: fine) {
+  .sync-status-btn:hover svg {
+    transform: scale(1.08);
+  }
+}
+
+/* ===== 同步设置面板（底部弹层，G2 玻璃） ===== */
 
 .sync-overlay {
   position: fixed;
@@ -57,24 +63,42 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(20, 20, 24, 0.32);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
   z-index: 1000;
-  animation: syncFadeIn 200ms ease-out;
+  animation: sync-fade-in var(--dur-base) var(--ease-standard);
 }
 
 .sync-sheet {
-  background: #FFFFFF;
+  background: var(--glass-overlay-bg);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid var(--glass-edge);
+  border-bottom: none;
   width: 100%;
   max-width: 480px;
-  border-radius: 16px 16px 0 0;
-  padding: 16px 16px calc(20px + var(--bottom-safe));
+  border-radius: var(--radius-modal) var(--radius-modal) 0 0;
+  padding: 12px 16px calc(20px + var(--bottom-safe));
   max-height: 85vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  animation: syncSheetUp 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    var(--shadow-float);
+  animation: sync-sheet-up var(--dur-base) var(--ease-decelerate);
+}
+
+/* 把手：暗示可拖动关闭的视觉语言（本期不做拖拽逻辑） */
+.sync-sheet-grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ink-300);
+  margin: 0 auto 8px;
 }
 
 .sync-sheet-header {
@@ -85,9 +109,8 @@
 }
 
 .sync-sheet-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #1A1A1A;
+  font: var(--text-title);
+  color: var(--ink-900);
 }
 
 .sync-close-btn {
@@ -98,32 +121,40 @@
   justify-content: center;
   background: transparent;
   border: none;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
 .sync-close-btn svg {
   width: 18px;
   height: 18px;
-  fill: #999999;
+  fill: var(--ink-400);
+  transition: fill var(--dur-fast) var(--ease-standard);
+}
+
+.sync-close-btn:active {
+  background: var(--surface-2);
 }
 
 .sync-close-btn:active svg {
-  opacity: 0.7;
+  fill: var(--ink-700);
 }
 
 .sync-status {
-  font-size: 13px;
-  color: #888888;
-  background: #F5F5F5;
-  border-radius: 8px;
+  font: var(--text-caption);
+  color: var(--ink-500);
+  background: var(--surface-2);
+  border-radius: var(--radius-btn);
   padding: 8px 12px;
   margin-bottom: 16px;
+  font-variant-numeric: tabular-nums;
 }
 
 .sync-status-error {
-  color: #E54D42;
-  background: rgba(229, 77, 66, 0.08);
+  color: var(--danger);
+  background: var(--danger-soft);
 }
 
 .sync-field {
@@ -132,48 +163,57 @@
 
 .sync-field-label {
   display: block;
-  font-size: 13px;
-  color: #666666;
+  font: var(--text-caption);
+  color: var(--ink-500);
   margin-bottom: 6px;
 }
 
 .sync-input {
   width: 100%;
   height: 42px;
-  border: 1px solid #E5E5E5;
-  border-radius: 8px;
+  border: 1px solid var(--ink-300);
+  border-radius: var(--radius-btn);
   padding: 0 12px;
   font-size: 14px;
   font-family: inherit;
-  background: #FAFAFA;
-  color: #1A1A1A;
+  background: var(--bg);
+  color: var(--ink-900);
   outline: none;
-  transition: border-color 0.15s;
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
 }
 
+/* focus 态：靛紫描边 + 外扩光环 */
 .sync-input:focus {
-  border-color: #1A1A1A;
-  background: #FFFFFF;
+  border-color: var(--brand-hue);
+  box-shadow: 0 0 0 3px var(--brand-hue-soft);
+  background: var(--surface);
 }
 
 .sync-input::placeholder {
-  color: #CCCCCC;
+  color: var(--ink-300);
 }
 
 .sync-btn {
   width: 100%;
   height: 44px;
-  border-radius: 8px;
+  border-radius: var(--radius-btn);
   border: none;
   font-size: 14px;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--dur-fast) var(--ease-standard),
+    filter var(--dur-fast) var(--ease-standard),
+    opacity var(--dur-fast) var(--ease-standard);
 }
 
 .sync-btn:active {
-  opacity: 0.8;
+  transform: scale(0.97);
 }
 
 .sync-btn:disabled {
@@ -182,8 +222,8 @@
 }
 
 .sync-btn-primary {
-  background: #1A1A1A;
-  color: #FFFFFF;
+  background: var(--brand);
+  color: var(--bg);
 }
 
 .sync-action-row {
@@ -194,33 +234,33 @@
 
 .sync-btn-secondary {
   flex: 1;
-  background: #F5F5F5;
-  color: #666666;
+  background: var(--surface-2);
+  color: var(--ink-700);
 }
 
 .sync-btn-text-danger {
   flex: 1;
   background: transparent;
-  color: #E54D42;
+  color: var(--danger);
 }
 
 .sync-help {
   margin-top: 16px;
-  border-top: 1px solid #F0F0F0;
+  border-top: 1px solid var(--hairline);
   padding-top: 12px;
 }
 
 .sync-help summary {
-  font-size: 13px;
-  color: #888888;
+  font: var(--text-caption);
+  color: var(--ink-500);
   cursor: pointer;
   padding: 4px 0;
   -webkit-tap-highlight-color: transparent;
 }
 
 .sync-help-body {
-  font-size: 13px;
-  color: #888888;
+  font: var(--text-caption);
+  color: var(--ink-500);
   line-height: 1.7;
 }
 
@@ -229,11 +269,11 @@
 }
 
 .sync-help-body strong {
-  color: #666666;
+  color: var(--ink-700);
   font-weight: 600;
 }
 
-@keyframes syncFadeIn {
+@keyframes sync-fade-in {
   from {
     opacity: 0;
   }
@@ -242,7 +282,7 @@
   }
 }
 
-@keyframes syncSheetUp {
+@keyframes sync-sheet-up {
   from {
     transform: translateY(100%);
   }
@@ -265,21 +305,19 @@
 
   .sync-sheet {
     width: min(440px, calc(100vw - 48px));
-    border-radius: 16px;
+    border-radius: var(--radius-modal);
+    border-bottom: 1px solid var(--glass-edge);
     padding: 20px 24px 24px;
-    animation: syncDialogIn 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    animation: sync-dialog-in var(--dur-base) var(--ease-decelerate);
   }
 
-  .sync-close-btn:hover svg {
-    opacity: 0.7;
-  }
-
-  .sync-btn:hover {
-    opacity: 0.85;
+  /* 对话框形态不需要「可拖动关闭」的把手暗示 */
+  .sync-sheet-grabber {
+    display: none;
   }
 }
 
-@keyframes syncDialogIn {
+@keyframes sync-dialog-in {
   from {
     opacity: 0;
     transform: scale(0.96) translateY(8px);
@@ -287,5 +325,20 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* hover：仅鼠标设备 */
+@media (hover: hover) and (pointer: fine) {
+  .sync-close-btn:hover {
+    background: var(--surface-2);
+  }
+
+  .sync-close-btn:hover svg {
+    fill: var(--ink-700);
+  }
+
+  .sync-btn:not(:disabled):hover {
+    filter: brightness(1.04);
   }
 }

@@ -71,6 +71,7 @@ export function SyncSettings({
   return (
     <div className="sync-overlay" onClick={onClose}>
       <div className="sync-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sync-sheet-grabber" aria-hidden="true" />
         <div className="sync-sheet-header">
           <h3 className="sync-sheet-title">多端同步</h3>
           <button className="sync-close-btn" onClick={onClose} aria-label="关闭">

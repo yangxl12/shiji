@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { Note, Category } from '../../types';
 import { CATEGORIES } from '../../utils/constants';
 import { batchSoftDeleteNote } from '../../db';
+import { useScrollState } from '../../hooks/useScrollState';
 import {
   NoteCard,
   EmptyState,
@@ -40,6 +41,9 @@ export function NoteListPage({
   onToast,
 }: NoteListPageProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  // 滚动联动：顶栏玻璃化（纯表现层）
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isScrolled = useScrollState(scrollRef);
 
   const categoryInfo = CATEGORIES.find((c) => c.key === category)!;
 
@@ -92,21 +96,22 @@ export function NoteListPage({
           onDelete={handleDeleteClick}
         />
       ) : (
-        <div className="note-list-header">
+        <div className={`note-list-header${isScrolled ? ' is-scrolled' : ''}`}>
           <h1 className="note-list-title">{categoryInfo.label}</h1>
         </div>
       )}
 
-      <div className={`note-list-scroll${isBatchMode ? ' batch-mode' : ''}`}>
+      <div ref={scrollRef} className={`note-list-scroll${isBatchMode ? ' batch-mode' : ''}`}>
         {notes.length === 0 ? (
           <EmptyState text={categoryInfo.emptyText} />
         ) : (
-          notes.map((note) => (
+          notes.map((note, index) => (
             <NoteCard
               key={note.id}
               note={note}
               isBatchMode={isBatchMode}
               isSelected={selectedIds.has(note.id)}
+              index={index}
               onClick={() => onViewNote(note)}
               onToggleSelect={() => onToggleSelect(note.id)}
               onLongPress={() => handleLongPress(note.id)}

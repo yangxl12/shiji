@@ -1,16 +1,25 @@
+/* ===== TabBar：悬浮玻璃浮岛（G1 配方） ===== */
+
 .tab-bar {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   /* 使用启动时冻结的安全区变量（见 main.tsx），避免安卓手势条显隐导致高度抖动 */
-  height: calc(56px + var(--bottom-safe));
-  background: #FFFFFF;
-  border-top: 1px solid #F0F0F0;
+  left: var(--nav-offset);
+  right: var(--nav-offset);
+  bottom: calc(var(--nav-offset) + var(--safe-area-bottom));
+  height: var(--nav-height);
+  background: var(--glass-nav-bg);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  /* 上缘 1px 受光高光 + 下缘投影 = 玻璃「厚度」 */
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 var(--hairline),
+    0 8px 32px rgba(24, 24, 32, 0.08);
+  border-radius: var(--radius-nav);
   display: flex;
   justify-content: space-around;
-  align-items: flex-start;
-  padding-top: 8px;
+  align-items: center;
+  padding: 0 4px;
   z-index: 1000;
 }
 
@@ -25,14 +34,20 @@
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  color: var(--ink-400);
+  border-radius: var(--radius-chip);
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .tab-icon {
-  width: 24px;
-  height: 24px;
+  /* 常驻 44×30：激活胶囊底出现时零布局位移（CLS = 0） */
+  width: 44px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: var(--radius-chip);
+  transition: background-color var(--dur-base) var(--ease-standard);
 }
 
 .tab-icon svg {
@@ -42,21 +57,47 @@
 }
 
 .tab-label {
-  font-size: 10px;
-  font-weight: 500;
+  font: var(--text-micro);
+  letter-spacing: 0.02em;
 }
 
-.tab-item:not(.tab-active) {
-  color: #999999;
-}
-
+/* 激活态：墨色 8% 胶囊底 + 图标一次性弹性微动 */
 .tab-active {
-  color: #1A1A1A;
+  color: var(--ink-900);
 }
 
-/* 桌面端：悬停反馈 */
-@media (min-width: 768px) {
+.tab-active .tab-icon {
+  background: color-mix(in srgb, var(--ink-900) 8%, transparent);
+}
+
+.tab-active .tab-icon svg {
+  animation: tab-icon-pop 240ms var(--ease-spring);
+}
+
+@keyframes tab-icon-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 鼠标设备悬停反馈（触屏不背 hover 包袱） */
+@media (hover: hover) and (pointer: fine) {
   .tab-item:not(.tab-active):hover {
-    color: #555555;
+    color: var(--ink-700);
+  }
+}
+
+/* ===== 桌面端适配（≥768px）：浮岛对齐内容列 ===== */
+
+@media (min-width: 768px) {
+  .tab-bar {
+    left: max(var(--nav-offset), calc(50vw - var(--app-max-width) / 2 + var(--nav-offset)));
+    right: max(var(--nav-offset), calc(50vw - var(--app-max-width) / 2 + var(--nav-offset)));
   }
 }

@@ -1,0 +1,143 @@
+/**
+ * 拾记 · 设计令牌（Design Tokens）—— 全站唯一视觉真源
+ * 规范：docs/UI交互优化方案.md（「墨韵 · 玻璃」）
+ * 本文件必须在所有组件 CSS 之前引入（见 main.tsx 首行）。
+ * 性能红线：所有动效只触碰 transform / opacity；玻璃元素均为 fixed/sticky 且同屏 ≤ 3。
+ */
+
+:root {
+  /* ── 中性色阶（冷灰微调，替代散落的硬编码灰阶） ── */
+  --ink-900: #1A1A1E;   /* 主文本 / CTA / 选中态 */
+  --ink-700: #3D3D43;   /* 次级文本 */
+  --ink-500: #6E6E76;   /* 辅助文本 / 图标 */
+  --ink-400: #9A9AA2;   /* 占位 / 未选中 Tab */
+  --ink-300: #C7C7CE;   /* 弱化信息（时间戳）/ 输入描边 */
+  --hairline: rgba(26, 26, 30, 0.08); /* 发丝分割线 */
+
+  /* ── 表面层级 ── */
+  --bg: #F7F7FA;         /* 页面底色 */
+  --surface: #FFFFFF;    /* 卡片 */
+  --surface-2: #F2F2F5;  /* 二级表面 / 次按钮底 */
+  --bg-desktop: #EFEFF4; /* 桌面端（≥768px）衬托内容列的底色 */
+
+  /* ── 品牌与语义 ── */
+  --brand: var(--ink-900);          /* 墨黑：品牌行动色 */
+  --brand-hue: #6366F1;             /* 靛紫：focus 环 / 进行态 / 环境光 */
+  --brand-hue-soft: rgba(99, 102, 241, 0.12);
+  --danger: #E54D42;
+  --danger-soft: rgba(229, 77, 66, 0.08);
+
+  /* ── 标签色（与 constants.ts 的 TAG_COLORS 保持对齐） ── */
+  --tag-red: #EF5A4E;
+  --tag-orange: #F5822E;
+  --tag-yellow: #F0B429;
+  --tag-gray: #9A9AA2;
+
+  /* ── 字体体系（system-ui 栈，零网络成本） ── */
+  --font-sans: -apple-system, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --text-display: 700 26px/1.35 var(--font-sans); /* 编辑页标题（桌面） */
+  --text-title-xl: 700 22px/1.4 var(--font-sans);  /* 编辑页标题（移动） */
+  --text-title: 600 17px/1.4 var(--font-sans);     /* 页面标题、计数 */
+  --text-body: 400 16px/1.75 var(--font-sans);    /* 正文输入 */
+  --text-body-sm: 400 15px/1.6 var(--font-sans);  /* 弹层正文、空态 */
+  --text-caption: 400 13px/1.5 var(--font-sans);  /* 辅助说明 */
+  --text-micro: 500 12px/1.4 var(--font-sans);    /* 时间戳、Tab 标签 */
+
+  /* ── 圆角 ── */
+  --radius-card: 16px;
+  --radius-nav: 24px;   /* 玻璃导航浮岛 */
+  --radius-modal: 20px;
+  --radius-btn: 12px;
+  --radius-chip: 999px;
+
+  /* ── 阴影（双层柔和：贴地 + 漫射） ── */
+  --shadow-card: 0 1px 2px rgba(24, 24, 32, 0.04), 0 4px 16px rgba(24, 24, 32, 0.04);
+  --shadow-card-hover: 0 2px 4px rgba(24, 24, 32, 0.05), 0 12px 32px rgba(24, 24, 32, 0.10);
+  --shadow-float: 0 8px 32px rgba(24, 24, 32, 0.14); /* FAB / 浮层 */
+
+  /* ── 动效令牌（替代 5 种混用时长） ── */
+  --dur-fast: 150ms;    /* 微反馈：hover、按压 */
+  --dur-base: 240ms;    /* 常规：toast、弹层 */
+  --dur-slow: 360ms;    /* 页面级过渡 */
+  --dur-page: 320ms;    /* 编辑页滑入 */
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);        /* 通用 */
+  --ease-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1); /* 进入 */
+  --ease-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15); /* 退出 */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);   /* 微弹：FAB、选中 */
+
+  /* ── 液态玻璃（G1 导航 / G2 浮层 / G3 点缀） ── */
+  --glass-nav-bg: rgba(255, 255, 255, 0.62);
+  --glass-overlay-bg: rgba(255, 255, 255, 0.78);
+  --glass-chip-bg: rgba(255, 255, 255, 0.5);
+  --glass-toast-bg: rgba(28, 28, 32, 0.82);
+  --glass-highlight: rgba(255, 255, 255, 0.65); /* 上缘受光高光 */
+  --glass-edge: rgba(255, 255, 255, 0.5);      /* 边缘描边 */
+
+  /* ── 导航浮岛尺寸（TabBar 内容高度，各页滚动区留白联动引用） ── */
+  --nav-height: 60px;
+  --nav-offset: 12px; /* 浮岛距屏幕边缘 */
+
+  color-scheme: light;
+}
+
+/* ── 暗色模式：令牌化后仅需一组变量覆盖 ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --ink-900: #F3F3F6;
+    --ink-700: #D4D4DA;
+    --ink-500: #9C9CA4;
+    --ink-400: #74747C;
+    --ink-300: #5A5A62;
+    --hairline: rgba(255, 255, 255, 0.09);
+
+    --bg: #121216;
+    --surface: #1C1C22;
+    --surface-2: #26262E;
+    --bg-desktop: #0B0B0F;
+
+    --danger-soft: rgba(229, 77, 66, 0.14);
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24), 0 4px 16px rgba(0, 0, 0, 0.28);
+    --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.28), 0 12px 32px rgba(0, 0, 0, 0.40);
+    --shadow-float: 0 8px 32px rgba(0, 0, 0, 0.45);
+
+    --glass-nav-bg: rgba(26, 26, 32, 0.68);
+    --glass-overlay-bg: rgba(30, 30, 37, 0.85);
+    --glass-chip-bg: rgba(255, 255, 255, 0.12);
+    --glass-toast-bg: rgba(20, 20, 24, 0.88);
+    --glass-highlight: rgba(255, 255, 255, 0.14);
+    --glass-edge: rgba(255, 255, 255, 0.12);
+  }
+}
+
+/* ── 键盘可达性：仅键盘触发时显示靛紫焦点环（2px 外环 + 2px 间隔） ── */
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--brand-hue);
+  outline-offset: 2px;
+}
+
+/* ── prefers-reduced-motion：关闭位移/缩放动画，仅保留 opacity 过渡（≤100ms） ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 100ms !important;
+    transition-property: opacity !important;
+    transition-delay: 0ms !important;
+  }
+}
+
+/* ── 玻璃降级：不支持 backdrop-filter 时提高实底不透明度（兜底） ── */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass-nav-bg: rgba(255, 255, 255, 0.96);
+    --glass-overlay-bg: rgba(255, 255, 255, 0.98);
+    --glass-chip-bg: rgba(255, 255, 255, 0.96);
+    --glass-toast-bg: rgba(28, 28, 32, 0.96);
+  }
+}

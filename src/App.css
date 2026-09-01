@@ -14,7 +14,7 @@
 }
 
 html {
-  font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   touch-action: manipulation;
@@ -27,8 +27,8 @@ body {
 }
 
 body {
-  background: #FAFAFA;
-  color: #1A1A1A;
+  background: var(--bg);
+  color: var(--ink-900);
   overflow-x: hidden;
 }
 
@@ -38,8 +38,21 @@ body {
 
 .app {
   min-height: 100vh;
-  background: #FAFAFA;
   overflow: hidden;
+  position: relative;
+}
+
+/* 环境氛围光：两枚极淡光斑（靛紫/玫红），fixed 定位不随滚动重绘。
+   玻璃必须透出色彩才成立——这是玻璃材质的「土壤」。 */
+.app::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(48rem 32rem at 12% -8%, rgba(99, 102, 241, 0.07), transparent 60%),
+    radial-gradient(40rem 28rem at 88% 108%, rgba(236, 72, 153, 0.05), transparent 60%);
 }
 
 /* Page Container - Both pages are always rendered */
@@ -49,9 +62,11 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #FAFAFA;
-  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-              opacity 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  /* 透明底透出环境氛围光（退出时同时生效） */
+  background: transparent;
+  /* 退出：先缓后快（280ms 与 useSwipeBack.RELEASE_DURATION 对齐） */
+  transition: transform 280ms var(--ease-accelerate),
+              opacity 280ms var(--ease-accelerate);
   will-change: transform, opacity;
 }
 
@@ -72,10 +87,26 @@ body {
   z-index: 2;
   transform: translateX(100%);
   opacity: 1;
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
+  /* 实底遮住下层列表；进入：先快后缓（内容到达） */
+  background: var(--bg);
+  transition: transform var(--dur-page) var(--ease-decelerate),
+              opacity var(--dur-page) var(--ease-decelerate);
+  box-shadow: -4px 0 24px rgba(24, 24, 32, 0.10);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
+}
+
+/* 编辑页自带环境光（transform 容器即 containing block，光斑锚定本页区域） */
+.app-page-edit::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(48rem 32rem at 12% -8%, rgba(99, 102, 241, 0.07), transparent 60%),
+    radial-gradient(40rem 28rem at 88% 108%, rgba(236, 72, 153, 0.05), transparent 60%);
 }
 
 /* Edit Page visible - Slide in from right */
@@ -83,10 +114,12 @@ body {
   transform: translateX(0);
 }
 
-/* List Page behind - Slight fade and scale when edit page is visible */
+/* List Page behind - 后退景深：列表退居后方 */
 .app-page-list.page-list-behind {
-  opacity: 0.85;
-  transform: scale(0.98);
+  opacity: 0.7;
+  transform: scale(0.96);
+  transition: transform var(--dur-page) var(--ease-decelerate),
+              opacity var(--dur-page) var(--ease-decelerate);
 }
 
 /* Loading & Error States */
@@ -99,57 +132,71 @@ body {
   justify-content: center;
   padding: 24px;
   text-align: center;
-  background: #FAFAFA;
+  background: var(--bg);
 }
 
-.app-loading-text {
-  font-size: 16px;
-  color: #888888;
+/* 加载态：呼吸圆点（纯 CSS） */
+.app-loading-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.app-loading-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-chip);
+  background: var(--ink-400);
+  animation: loading-breathe 1.2s var(--ease-standard) infinite;
+}
+
+.app-loading-dot:nth-child(2) {
+  animation-delay: 160ms;
+}
+
+.app-loading-dot:nth-child(3) {
+  animation-delay: 320ms;
+}
+
+@keyframes loading-breathe {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .app-error-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1A1A1A;
+  font: var(--text-title);
+  color: var(--ink-900);
   margin-bottom: 12px;
 }
 
 .app-error-text {
-  font-size: 14px;
-  color: #666666;
-  line-height: 1.6;
+  font: var(--text-caption);
+  color: var(--ink-500);
 }
 
 /* ===== 桌面端适配（≥768px）：内容列居中，页面底色衬托 ===== */
 
 @media (min-width: 768px) {
-  body,
-  .app {
-    background: #EFEFF4;
+  body {
+    background: var(--bg-desktop);
   }
 
   /* 页面容器收窄为居中列，带描边与柔和投影与底色区分 */
   .app-page {
     max-width: var(--app-max-width);
     margin: 0 auto;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 0 40px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 0 0 1px rgba(24, 24, 32, 0.05), 0 0 40px rgba(24, 24, 32, 0.08);
   }
 
   /* 隐藏位置改为整屏宽度，保证宽屏下完全移出可视区（100% 只移动一个列宽） */
   .app-page-edit {
     transform: translateX(100vw);
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 0 60px rgba(0, 0, 0, 0.16);
-  }
-
-  /* TabBar 与内容列对齐 */
-  .tab-bar {
-    max-width: var(--app-max-width);
-    margin: 0 auto;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
-  }
-
-  /* FAB 贴住内容列右下角 */
-  .fab {
-    right: max(16px, calc(50vw - var(--app-max-width) / 2 + 16px));
+    box-shadow: 0 0 0 1px rgba(24, 24, 32, 0.05), 0 0 60px rgba(24, 24, 32, 0.16);
   }
 }

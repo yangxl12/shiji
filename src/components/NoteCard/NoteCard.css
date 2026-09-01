@@ -3,23 +3,49 @@
   margin-bottom: 8px;
 }
 
+/* 实体白卡（列表卡片禁用玻璃——60fps 关键决策）：
+   描边 + 双层柔和阴影 + 三态反馈 + 首屏编排 */
 .note-card {
-  background: #FFFFFF;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  cursor: pointer;
   position: relative;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   /* 长按进入多选：屏蔽 iOS 长按系统呼出菜单 */
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   z-index: 1;
+  /* 首屏入场：fade-rise，前 8 张按 --i 递进 28ms（TSX 注入，长列表保护） */
+  animation: note-card-in var(--dur-base) var(--ease-standard) backwards;
+  animation-delay: calc(var(--i, 0) * 28ms);
+  transition: transform var(--dur-fast) var(--ease-standard);
 }
 
-.note-card:active {
-  background-color: #F5F5F5;
+/* hover 阴影经伪元素预渲染、opacity 切换，避免 box-shadow 过渡掉帧 */
+.note-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--shadow-card-hover);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+  pointer-events: none;
+}
+
+@keyframes note-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .note-card-header {
@@ -32,7 +58,7 @@
 .note-card-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1A1A1A;
+  color: var(--ink-900);
   line-height: 1.4;
   flex: 1;
   overflow: hidden;
@@ -40,17 +66,20 @@
   white-space: nowrap;
 }
 
+/* 标签色点：外扩同色光环，暗色模式下依然可辨 */
 .note-card-tag {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
   margin-top: 6px;
+  background: var(--tag-c, var(--ink-400));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tag-c, transparent) 14%, transparent);
 }
 
 .note-card-content {
   font-size: 14px;
-  color: #888888;
+  color: var(--ink-500);
   line-height: 1.5;
   margin-top: 4px;
   overflow: hidden;
@@ -65,8 +94,9 @@
 }
 
 .note-card-time {
-  font-size: 12px;
-  color: #BBBBBB;
+  font: var(--text-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-300);
   margin-top: 8px;
 }
 
@@ -78,23 +108,45 @@
   transform: translateY(-50%);
   width: 20px;
   height: 20px;
-  border: 2px solid #CCCCCC;
+  border: 2px solid var(--ink-300);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  background: transparent;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-spring);
 }
 
 .note-card-checkbox-checked {
-  background: #1A1A1A;
-  border-color: #1A1A1A;
+  background: var(--brand);
+  border-color: var(--brand);
+  transform: translateY(-50%) scale(1.06);
 }
 
 .note-card-checkbox svg {
   width: 12px;
   height: 12px;
-  fill: #FFFFFF;
+}
+
+/* 勾选描画动画 */
+.note-card-checkbox svg path {
+  fill: none;
+  stroke: var(--bg);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  animation: check-draw 200ms var(--ease-decelerate) forwards;
+}
+
+@keyframes check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .note-card-batch {
@@ -103,10 +155,28 @@
 
 .note-card-placeholder-title {
   font-style: italic;
-  color: #888888;
+  color: var(--ink-500);
 }
 
-/* ===== 桌面端适配（≥768px）：网格布局下间距由 gap 控制，补充悬停反馈 ===== */
+/* ===== 三态反馈矩阵 ===== */
+
+/* active：触屏与鼠标通用，收缩 + 阴影收回 */
+.note-card:active {
+  transform: scale(0.985);
+}
+
+/* hover：仅鼠标设备，位移 + 阴影扩散（transform/opacity） */
+@media (hover: hover) and (pointer: fine) {
+  .note-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .note-card:hover::after {
+    opacity: 1;
+  }
+}
+
+/* ===== 桌面端适配（≥768px）：网格布局下间距由 gap 控制 ===== */
 
 @media (min-width: 768px) {
   .note-card-wrapper {
@@ -128,9 +198,5 @@
 
   .note-card-time {
     margin-top: auto;
-  }
-
-  .note-card:hover {
-    background: #F7F7F8;
   }
 }

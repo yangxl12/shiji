@@ -8,6 +8,8 @@ interface NoteCardProps {
   note: Note;
   isBatchMode: boolean;
   isSelected: boolean;
+  /** 首屏入场编排索引（前 8 张 28ms 递进，由列表页传入；纯展示用） */
+  index?: number;
   onClick: () => void;
   onToggleSelect: () => void;
   onLongPress: () => void;
@@ -23,6 +25,7 @@ export function NoteCard({
   note,
   isBatchMode,
   isSelected,
+  index,
   onClick,
   onToggleSelect,
   onLongPress,
@@ -106,11 +109,18 @@ export function NoteCard({
   const displayTitle = note.title || note.content.slice(0, 20);
   const isPlaceholderTitle = !note.title && note.content;
 
+  // 纯展示用 CSS 变量：--tag-c 标签色（色点及光环）、--i 首屏编排索引（前 8 张）
+  const cardStyle = {
+    ...(tagColor ? { '--tag-c': tagColor } : {}),
+    ...(index !== undefined && index < 8 ? { '--i': index } : {}),
+  } as React.CSSProperties;
+
   return (
     <div className="note-card-wrapper">
       {/* Card Content */}
       <div
         className={`note-card ${isBatchMode ? 'note-card-batch' : ''}`}
+        style={cardStyle}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onTouchStart={handleTouchStart}
@@ -143,10 +153,7 @@ export function NoteCard({
             {displayTitle}
           </div>
           {tagColor && !isBatchMode && (
-            <div
-              className="note-card-tag"
-              style={{ backgroundColor: tagColor }}
-            />
+            <div className="note-card-tag" />
           )}
         </div>
         {note.title && note.content && (

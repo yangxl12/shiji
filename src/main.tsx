@@ -1,5 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+// 设计令牌必须最先引入，保证组件样式可覆盖令牌默认值
+import './styles/tokens.css'
 import App from './App.tsx'
 
 /**

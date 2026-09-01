@@ -1,20 +1,26 @@
+/* ===== BatchActionBar：G1 玻璃化批量操作栏 ===== */
+
 .batch-action-bar {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   height: 56px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #F0F0F0;
+  background: var(--glass-nav-bg);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 var(--hairline);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   z-index: 101;
-  animation: slideDown 200ms ease-out;
+  animation: batch-down var(--dur-base) var(--ease-decelerate);
 }
 
-@keyframes slideDown {
+@keyframes batch-down {
   from {
     transform: translateY(-100%);
   }
@@ -31,18 +37,21 @@
 
 .batch-action-cancel {
   font-size: 15px;
-  color: #666666;
+  color: var(--ink-500);
   background: none;
   border: none;
   cursor: pointer;
   padding: 8px;
   margin: -8px;
+  border-radius: var(--radius-btn);
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .batch-action-count {
-  font-size: 17px;
-  font-weight: 600;
-  color: #1A1A1A;
+  font: var(--text-title);
+  color: var(--ink-900);
+  font-variant-numeric: tabular-nums;
 }
 
 .batch-action-right {
@@ -58,8 +67,13 @@
   border: none;
   cursor: pointer;
   padding: 8px 12px;
-  border-radius: 4px;
-  transition: opacity 0.15s;
+  border-radius: var(--radius-btn);
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+
+.batch-action-btn:active {
+  opacity: 0.6;
 }
 
 .batch-action-btn:disabled {
@@ -68,9 +82,19 @@
 }
 
 .batch-action-select-all {
-  color: #1A1A1A;
+  color: var(--ink-900);
 }
 
 .batch-action-delete {
-  color: #E54D42;
+  color: var(--danger);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .batch-action-cancel:hover {
+    color: var(--ink-900);
+  }
+
+  .batch-action-btn:not(:disabled):hover {
+    opacity: 0.7;
+  }
 }

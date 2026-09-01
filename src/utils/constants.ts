@@ -16,52 +16,10 @@ export const CATEGORIES: { key: Category; label: string; emptyText: string }[] =
   { key: 'todo', label: '待办', emptyText: '还没有待办事项，点击右下角添加' },
 ];
 
+/** 标签色值：与 styles/tokens.css 的 --tag-* 令牌保持对齐（仅用于内联样式着色） */
 export const TAG_COLORS: { key: TagColor; label: string; value: string }[] = [
-  { key: 'red', label: '红', value: '#E54D42' },
-  { key: 'orange', label: '橙', value: '#F37B1D' },
-  { key: 'yellow', label: '黄', value: '#FBBF24' },
-  { key: 'gray', label: '灰', value: '#8C8C8C' },
+  { key: 'red', label: '红', value: '#EF5A4E' },
+  { key: 'orange', label: '橙', value: '#F5822E' },
+  { key: 'yellow', label: '黄', value: '#F0B429' },
+  { key: 'gray', label: '灰', value: '#9A9AA2' },
 ];
-
-export const COLORS = {
-  background: '#FAFAFA',
-  card: '#FFFFFF',
-  primaryText: '#1A1A1A',
-  secondaryText: '#888888',
-  tertiaryText: '#BBBBBB',
-  divider: '#F0F0F0',
-  accent: '#1A1A1A',
-  danger: '#E54D42',
-  chipBg: '#F5F5F5',
-  chipText: '#666666',
-  placeholder: '#CCCCCC',
-  toastBg: '#1A1A1A',
-  toastText: '#FFFFFF',
-  modalOverlay: 'rgba(0,0,0,0.4)',
-  unselectedTab: '#999999',
-  selectedTab: '#1A1A1A',
-};
-
-export const ANIMATION_DURATION = {
-  pageEnter: 250,
-  pageExit: 200,
-  fab: 300,
-  batchMode: 200,
-  toastEnter: 200,
-  toastStay: 2000,
-  toastExit: 200,
-  modal: 200,
-  debounce: 500,
-  fabDebounce: 300,
-  longPress: 300,
-};
-
-export const TOUCH_AREA = {
-  minSize: 48,
-  tabHeight: 56,
-  fabSize: 56,
-  cardRadius: 12,
-  buttonRadius: 8,
-  modalRadius: 16,
-  fabRadius: 16,
-};

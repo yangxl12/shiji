@@ -1,3 +1,4 @@
+/* 空态：图标漂浮微动 + 首次入场 fade-rise */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -5,25 +6,47 @@
   justify-content: center;
   padding: 48px 24px;
   text-align: center;
+  animation: empty-rise var(--dur-base) var(--ease-decelerate);
+}
+
+@keyframes empty-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .empty-state-icon {
   width: 80px;
   height: 80px;
   margin-bottom: 16px;
-  opacity: 0.3;
+  animation: empty-float 6s var(--ease-standard) infinite;
+}
+
+/* 漂浮微动：translateY ±4px（prefers-reduced-motion 下自动停用） */
+@keyframes empty-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
 .empty-state-icon svg {
   width: 100%;
   height: 100%;
-  fill: #BBBBBB;
+  fill: var(--ink-300);
 }
 
 .empty-state-text {
-  font-size: 15px;
-  color: #BBBBBB;
-  line-height: 1.6;
+  font: var(--text-body-sm);
+  color: var(--ink-300);
 }
 
 /* 桌面端：父容器为双列网格时占满整行，保持居中展示 */

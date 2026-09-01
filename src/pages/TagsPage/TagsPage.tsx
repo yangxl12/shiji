@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import type { Note, TagColor } from '../../types';
 import {
   NoteCard,
@@ -7,6 +7,7 @@ import {
   BatchActionBar,
   Modal,
 } from '../../components';
+import { useScrollState } from '../../hooks/useScrollState';
 import { exportNotes } from '../../utils/export';
 import './TagsPage.css';
 
@@ -49,6 +50,9 @@ export function TagsPage({
   // 默认选中红色标签
   const [selectedTag, setSelectedTag] = useState<TagColor | 'all'>('red');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  // 滚动联动：顶栏玻璃化（纯表现层）
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isScrolled = useScrollState(scrollRef);
 
   const filteredNotes = useMemo(() => {
     if (selectedTag === 'all') {
@@ -136,7 +140,7 @@ export function TagsPage({
   return (
     <>
       {!isBatchMode && (
-        <div className="tags-header">
+        <div className={`tags-header${isScrolled ? ' is-scrolled' : ''}`}>
           <TagChipNav selectedTag={selectedTag} onSelect={setSelectedTag} />
           <div className="tags-header-actions">
             <button
@@ -164,16 +168,17 @@ export function TagsPage({
         />
       )}
 
-      <div className={`tags-page ${isBatchMode ? 'tags-page-batch' : ''}`}>
+      <div ref={scrollRef} className={`tags-page ${isBatchMode ? 'tags-page-batch' : ''}`}>
         {filteredNotes.length === 0 ? (
           <EmptyState text={getEmptyText()} />
         ) : (
-          filteredNotes.map((note) => (
+          filteredNotes.map((note, index) => (
             <NoteCard
               key={note.id}
               note={note}
               isBatchMode={isBatchMode}
               isSelected={selectedIds.has(note.id)}
+              index={index}
               onClick={() => onViewNote(note)}
               onToggleSelect={() => handleToggleSelect(note.id)}
               onLongPress={() => handleLongPress(note.id)}

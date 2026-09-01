@@ -20,10 +20,11 @@ const CLAIM_THRESHOLD = 12;
 const COMPLETE_RATIO = 0.3;
 /** 甩动速度阈值（px/ms） */
 const FLING_VELOCITY = 0.6;
-/** 松手后的过渡时长（ms） */
+/** 松手后的过渡时长（ms），与 App.css 页面退出过渡保持一致 */
 const RELEASE_DURATION = 280;
 
-const EASE = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+/** 退出曲线：对齐令牌 --ease-accelerate（先缓后快，内容快速让路） */
+const EASE = 'cubic-bezier(0.3, 0, 0.8, 0.15)';
 
 /**
  * 二级页面左侧边缘右滑返回手势（跟手拖拽）。
@@ -87,8 +88,9 @@ export function useSwipeBack(
       const p = x / g.width;
       const behind = behindRef.current;
       if (behind) {
-        behind.style.opacity = String(0.85 + 0.15 * p);
-        behind.style.transform = `scale(${0.98 + 0.02 * p})`;
+        // 跟手恢复：从后景深（opacity 0.7 / scale 0.96）线性回填
+        behind.style.opacity = String(0.7 + 0.3 * p);
+        behind.style.transform = `scale(${0.96 + 0.04 * p})`;
       }
     };
 
@@ -122,7 +124,7 @@ export function useSwipeBack(
       page.style.transition = `transform ${RELEASE_DURATION}ms ${EASE}`;
       const behind = behindRef.current;
       if (behind) {
-        behind.style.transition = `opacity 0.35s ${EASE}, transform 0.35s ${EASE}`;
+        behind.style.transition = `opacity ${RELEASE_DURATION}ms ${EASE}, transform ${RELEASE_DURATION}ms ${EASE}`;
       }
 
       if (complete) {

@@ -1,34 +1,86 @@
+/* ===== FAB：墨色晶体 ===== */
+
 .fab {
   position: fixed;
   right: 16px;
-  bottom: calc(56px + var(--bottom-safe) + 16px);
+  bottom: calc(var(--nav-height) + var(--safe-area-bottom) + var(--nav-offset) + 20px);
   width: 56px;
   height: 56px;
-  border-radius: 16px;
-  background: #1A1A1A;
+  border-radius: var(--radius-card);
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
-  transition: transform 0.15s;
   -webkit-tap-highlight-color: transparent;
+  /* 墨色纵向微渐变 + inset 顶部高光 = 墨色晶体（明暗两用：brand 即墨/即纸） */
+  /* color-mix 降级：不支持时回退纯色 */
+  background: var(--brand);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand) 88%, #fff),
+    var(--brand)
+  );
+  box-shadow: var(--shadow-float);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--brand) 60%, #fff),
+    var(--shadow-float);
+  /* 页面进入：scale 0→1 弹性入场，延迟 100ms 错峰 */
+  animation: fab-in 300ms var(--ease-spring) 100ms backwards;
+  transition:
+    transform var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard),
+    opacity var(--dur-base) var(--ease-standard);
+}
+
+@keyframes fab-in {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* 滚动联动：向下滚动沉底隐藏、向上回浮（useFabAutoHide 驱动） */
+.fab-hidden {
+  transform: translateY(160%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .fab:active {
-  transform: scale(0.92);
+  transform: scale(0.94);
 }
 
 .fab-icon {
   width: 24px;
   height: 24px;
-  color: #FFFFFF;
+  /* 墨底纸字 / 纸底墨字：图标色即页面底色 */
+  color: var(--bg);
 }
 
 .fab-icon svg {
   width: 100%;
   height: 100%;
   fill: currentColor;
+}
+
+/* hover：仅鼠标设备，缩放 + 阴影扩散 */
+@media (hover: hover) and (pointer: fine) {
+  .fab:hover {
+    transform: scale(1.06);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--brand) 60%, #fff),
+      0 12px 40px rgba(24, 24, 32, 0.22);
+  }
+}
+
+/* ===== 桌面端适配（≥768px）：贴住内容列右下角 ===== */
+
+@media (min-width: 768px) {
+  .fab {
+    right: max(16px, calc(50vw - var(--app-max-width) / 2 + 16px));
+  }
 }

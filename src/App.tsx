@@ -365,7 +365,11 @@ function App() {
   if (isLoading) {
     return (
       <div className="app-loading">
-        <div className="app-loading-text">加载中...</div>
+        <div className="app-loading-dots" role="status" aria-label="加载中">
+          <span className="app-loading-dot" />
+          <span className="app-loading-dot" />
+          <span className="app-loading-dot" />
+        </div>
       </div>
     );
   }

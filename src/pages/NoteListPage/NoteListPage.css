@@ -1,77 +1,69 @@
 .note-list-container {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  /* 定高（非 min-height）：保证 .note-list-scroll 成为真正的滚动容器，
+     滚动联动（顶栏玻璃化）依赖其 scroll 事件；短内容时同样撑满 */
+  height: 100%;
 }
 
-/* Header with select button - Sticky at top */
+/* 顶栏：置顶透明融入背景，滚动超过 8px 后玻璃化（.is-scrolled 由 useScrollState 驱动） */
 .note-list-header {
-  position: sticky;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
   height: 56px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #F0F0F0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   z-index: 99;
   flex-shrink: 0;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-base) var(--ease-standard);
+}
+
+/* 玻璃层：伪元素承载（G1 配方），opacity 渐显避免 backdrop-filter 跳变 */
+.note-list-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--glass-nav-bg);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-standard);
+  pointer-events: none;
+}
+
+.note-list-header.is-scrolled::before {
+  opacity: 1;
+}
+
+.note-list-header.is-scrolled {
+  border-bottom-color: var(--hairline);
 }
 
 .note-list-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #1A1A1A;
+  font: var(--text-title);
+  color: var(--ink-900);
+  /* 滚动态字距收紧：强化「吸附」心理暗示 */
+  transition: letter-spacing var(--dur-base) var(--ease-standard);
 }
 
-/* Scrollable content area */
+.note-list-header.is-scrolled .note-list-title {
+  letter-spacing: -0.01em;
+}
+
+/* Scrollable content area（顶栏已 fixed，让出 56px + 原有 16px 间距） */
 .note-list-scroll {
   flex: 1;
-  padding: 16px;
-  padding-bottom: calc(56px + var(--bottom-safe) + 80px);
+  /* 底部让出导航浮岛 + FAB 悬浮高度，末卡不被 FAB 遮挡 */
+  padding: 72px 16px calc(var(--nav-height) + var(--safe-area-bottom) + 92px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-}
-
-/* 批量模式下顶部操作栏为 fixed 定位，滚动区需让出其高度，避免列表顶到屏幕上沿 */
-.note-list-scroll.batch-mode {
-  padding-top: calc(56px + 16px);
-}
-
-/* Pull indicator at top */
-.note-list-pull-indicator {
-  height: 0;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  flex-shrink: 0;
-}
-
-.note-list-pull-indicator.visible {
-  height: 60px;
-}
-
-.note-list-pull-indicator-text {
-  font-size: 14px;
-  color: #BBBBBB;
-  opacity: 0;
-  transform: translateY(-10px);
-  transition: all 0.3s ease;
-}
-
-.note-list-pull-indicator.visible .note-list-pull-indicator-text {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Pull to bounce container */
-.note-list-pull-container {
-  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 /* ===== 桌面端适配（≥768px）：卡片双列网格 ===== */

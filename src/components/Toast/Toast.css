@@ -1,28 +1,41 @@
+/* ===== Toast：深色玻璃胶囊 ===== */
+
 .toast-container {
   position: fixed;
-  bottom: calc(56px + var(--bottom-safe) + 24px);
+  bottom: calc(var(--nav-height) + var(--safe-area-bottom) + 36px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
   pointer-events: none;
+  /* 多条纵向堆叠（渲染逻辑不变，仅容器布局） */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .toast {
-  background: #1A1A1A;
+  background: var(--glass-toast-bg);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   color: #FFFFFF;
   font-size: 14px;
   font-weight: 500;
   padding: 10px 20px;
-  border-radius: 8px;
+  border-radius: var(--radius-chip);
   white-space: nowrap;
-  animation: toastEnter 200ms ease-out;
+  /* 上缘微高光 = 玻璃厚度 */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    var(--shadow-float);
+  animation: toast-enter var(--dur-base) var(--ease-standard);
 }
 
 .toast-exit {
-  animation: toastExit 200ms ease-in forwards;
+  animation: toast-exit var(--dur-base) var(--ease-standard) forwards;
 }
 
-@keyframes toastEnter {
+@keyframes toast-enter {
   from {
     opacity: 0;
     transform: translateY(20px);
@@ -33,7 +46,7 @@
   }
 }
 
-@keyframes toastExit {
+@keyframes toast-exit {
   from {
     opacity: 1;
     transform: translateY(0);
