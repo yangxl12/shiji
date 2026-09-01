@@ -73,3 +73,14 @@
 .note-list-pull-container {
   transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
+
+/* ===== 桌面端适配（≥768px）：卡片双列网格 ===== */
+
+@media (min-width: 768px) {
+  .note-list-scroll {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    align-content: start;
+  }
+}

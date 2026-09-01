@@ -25,3 +25,10 @@
   color: #BBBBBB;
   line-height: 1.6;
 }
+
+/* 桌面端：父容器为双列网格时占满整行，保持居中展示 */
+@media (min-width: 768px) {
+  .empty-state {
+    grid-column: 1 / -1;
+  }
+}

@@ -86,3 +86,14 @@
   color: #BBBBBB;
   line-height: 1.6;
 }
+
+/* ===== 桌面端适配（≥768px）：卡片双列网格 ===== */
+
+@media (min-width: 768px) {
+  .tags-page {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    align-content: start;
+  }
+}

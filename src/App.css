@@ -9,6 +9,8 @@
   --safe-area-bottom: 0px;
   /* 底部安全间距：至少 12px，保证安卓手势条（小横条）不遮挡 TabBar 内容 */
   --bottom-safe: max(var(--safe-area-bottom), 12px);
+  /* 桌面端内容列宽度（≥768px 生效，见文件末尾媒体查询） */
+  --app-max-width: 768px;
 }
 
 html {
@@ -116,4 +118,38 @@ body {
   font-size: 14px;
   color: #666666;
   line-height: 1.6;
+}
+
+/* ===== 桌面端适配（≥768px）：内容列居中，页面底色衬托 ===== */
+
+@media (min-width: 768px) {
+  body,
+  .app {
+    background: #EFEFF4;
+  }
+
+  /* 页面容器收窄为居中列，带描边与柔和投影与底色区分 */
+  .app-page {
+    max-width: var(--app-max-width);
+    margin: 0 auto;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 0 40px rgba(0, 0, 0, 0.08);
+  }
+
+  /* 隐藏位置改为整屏宽度，保证宽屏下完全移出可视区（100% 只移动一个列宽） */
+  .app-page-edit {
+    transform: translateX(100vw);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 0 60px rgba(0, 0, 0, 0.16);
+  }
+
+  /* TabBar 与内容列对齐 */
+  .tab-bar {
+    max-width: var(--app-max-width);
+    margin: 0 auto;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+  }
+
+  /* FAB 贴住内容列右下角 */
+  .fab {
+    right: max(16px, calc(50vw - var(--app-max-width) / 2 + 16px));
+  }
 }
