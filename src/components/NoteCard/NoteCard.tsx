@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useEffect } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import type { Note, TagColor } from '../../types';
 import { TAG_COLORS } from '../../utils/constants';
 import { formatRelativeTime } from '../../utils/time';
@@ -8,11 +8,8 @@ interface NoteCardProps {
   note: Note;
   isBatchMode: boolean;
   isSelected: boolean;
-  isSwiped: boolean;
   onClick: () => void;
   onToggleSelect: () => void;
-  onSwipe: (isSwiped: boolean) => void;
-  onDelete: () => void;
   onLongPress: () => void;
 }
 
@@ -22,41 +19,17 @@ const getTagColor = (tagColor: TagColor | null): string | null => {
   return color?.value ?? null;
 };
 
-// Delete icon SVG
-const DeleteIcon = () => (
-  <svg viewBox="0 0 24 24">
-    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-  </svg>
-);
-
-// Cancel icon SVG
-const CancelIcon = () => (
-  <svg viewBox="0 0 24 24">
-    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-  </svg>
-);
-
 export function NoteCard({
   note,
   isBatchMode,
   isSelected,
-  isSwiped,
   onClick,
   onToggleSelect,
-  onSwipe,
-  onDelete,
   onLongPress,
 }: NoteCardProps) {
-  const [currentOffset, setCurrentOffset] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
   const touchStartXRef = useRef(0);
   const touchStartYRef = useRef(0);
-  const touchStartTimeRef = useRef(0);
-  const cardRef = useRef<HTMLDivElement>(null);
 
-  const SWIPE_THRESHOLD = 60;
-  const MAX_SWIPE = 144; // 72px * 2 buttons
-  const ACTION_WIDTH = 144;
   const LONG_PRESS_DURATION = 500;
   const LONG_PRESS_TOLERANCE = 10; // 超过该位移视为滑动/滚动，取消长按
 
@@ -73,13 +46,6 @@ export function NoteCard({
   // 组件卸载时清理定时器
   useEffect(() => clearLongPressTimer, [clearLongPressTimer]);
 
-  // Reset offset when swiped state changes externally
-  useEffect(() => {
-    if (!isSwiped) {
-      setCurrentOffset(0);
-    }
-  }, [isSwiped]);
-
   const handleTouchStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
     if (isBatchMode) return;
 
@@ -87,8 +53,6 @@ export function NoteCard({
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     touchStartXRef.current = clientX;
     touchStartYRef.current = clientY;
-    touchStartTimeRef.current = Date.now();
-    setIsDragging(true);
 
     // 开始长按计时
     longPressFiredRef.current = false;
@@ -101,8 +65,6 @@ export function NoteCard({
   }, [isBatchMode, clearLongPressTimer, onLongPress]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    if (!isDragging || isBatchMode) return;
-
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     const deltaX = clientX - touchStartXRef.current;
@@ -115,35 +77,11 @@ export function NoteCard({
     ) {
       clearLongPressTimer();
     }
-
-    // Only allow left swipe (negative deltaX)
-    if (deltaX < 0) {
-      const absOffset = Math.min(Math.abs(deltaX), MAX_SWIPE);
-      setCurrentOffset(-absOffset);
-    } else if (deltaX > 0 && isSwiped) {
-      // Swiping right to close
-      setCurrentOffset(Math.max(-ACTION_WIDTH + deltaX, 0));
-    }
-  }, [isDragging, isBatchMode, isSwiped, clearLongPressTimer]);
+  }, [clearLongPressTimer]);
 
   const handleTouchEnd = useCallback(() => {
     clearLongPressTimer();
-    if (!isDragging) return;
-    setIsDragging(false);
-
-    const absOffset = Math.abs(currentOffset);
-    const timeDelta = Date.now() - touchStartTimeRef.current;
-    const velocity = absOffset / timeDelta;
-
-    // Fast swipe or past threshold -> open, otherwise close
-    if (velocity > 0.5 || absOffset > SWIPE_THRESHOLD) {
-      setCurrentOffset(-ACTION_WIDTH);
-      onSwipe(true);
-    } else {
-      setCurrentOffset(0);
-      onSwipe(false);
-    }
-  }, [isDragging, currentOffset, onSwipe, clearLongPressTimer]);
+  }, [clearLongPressTimer]);
 
   const handleClick = useCallback(() => {
     // 长按已触发，抑制随后的点击（避免误触/重复选中）
@@ -152,32 +90,17 @@ export function NoteCard({
       return;
     }
 
-    if (isDragging) return;
-
     if (isBatchMode) {
       onToggleSelect();
-    } else if (isSwiped) {
-      // Close if swiped
-      onSwipe(false);
     } else {
       onClick();
     }
-  }, [isBatchMode, isSwiped, isDragging, onClick, onToggleSelect, onSwipe]);
+  }, [isBatchMode, onClick, onToggleSelect]);
 
   // 长按会触发浏览器上下文菜单（桌面右键/移动长按选择），进入多选模式时需屏蔽
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
   }, []);
-
-  const handleDeleteClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDelete();
-  }, [onDelete]);
-
-  const handleCancelClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSwipe(false);
-  }, [onSwipe]);
 
   const tagColor = getTagColor(note.tagColor);
   const displayTitle = note.title || note.content.slice(0, 20);
@@ -185,34 +108,9 @@ export function NoteCard({
 
   return (
     <div className="note-card-wrapper">
-      {/* Swipe Actions Background */}
-      {!isBatchMode && (
-        <div className="note-card-actions">
-          <button
-            className="note-card-action-btn note-card-action-delete"
-            onClick={handleDeleteClick}
-          >
-            <DeleteIcon />
-            <span>删除</span>
-          </button>
-          <button
-            className="note-card-action-btn note-card-action-cancel"
-            onClick={handleCancelClick}
-          >
-            <CancelIcon />
-            <span>取消</span>
-          </button>
-        </div>
-      )}
-
       {/* Card Content */}
       <div
-        ref={cardRef}
         className={`note-card ${isBatchMode ? 'note-card-batch' : ''}`}
-        style={{
-          transform: `translateX(${currentOffset}px)`,
-          transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-        }}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onTouchStart={handleTouchStart}
@@ -244,7 +142,7 @@ export function NoteCard({
           >
             {displayTitle}
           </div>
-          {tagColor && !isBatchMode && !isSwiped && (
+          {tagColor && !isBatchMode && (
             <div
               className="note-card-tag"
               style={{ backgroundColor: tagColor }}
