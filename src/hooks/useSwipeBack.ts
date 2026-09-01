@@ -127,7 +127,8 @@ export function useSwipeBack(
 
       if (complete) {
         g.finishing = true;
-        page.style.transform = 'translateX(100%)';
+        // 100vw 保证宽屏（居中内容列）下完全移出可视区；移动端与 100% 等价
+        page.style.transform = 'translateX(100vw)';
         if (behind) {
           behind.style.opacity = '1';
           behind.style.transform = 'scale(1)';
@@ -141,7 +142,7 @@ export function useSwipeBack(
           })
           .catch(() => restorePage());
       } else {
-        page.style.transform = `translateX(${g.baseLeft}px)`;
+        page.style.transform = `translateX(${g.baseLeft - g.layoutLeft}px)`;
         if (behind) {
           behind.style.opacity = '';
           behind.style.transform = '';
@@ -180,6 +181,8 @@ export function useSwipeBack(
         g.width = window.innerWidth || 1;
         // 以页面当前实际位置为基准，避免打断进行中的过渡动画
         g.baseLeft = Math.max(0, page.getBoundingClientRect().left);
+        // 布局左偏移：移动端全屏为 0，桌面端居中内容列为 (视口宽 - 列宽) / 2
+        g.layoutLeft = Math.max(0, (window.innerWidth - page.offsetWidth) / 2);
         g.curX = g.baseLeft;
         page.style.transition = 'none';
         const behind = behindRef.current;
