@@ -7,3 +7,4 @@ export { TagSelector } from './TagSelector/TagSelector';
 export { BatchActionBar } from './BatchActionBar/BatchActionBar';
 export { TagChipNav } from './TagChipNav/TagChipNav';
 export { EmptyState } from './EmptyState/EmptyState';
+export { SyncSettings, type SyncStatus } from './SyncSettings/SyncSettings';

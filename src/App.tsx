@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Note, Category, TabType, ToastMessage } from './types';
-import { initDB, getNotesByCategory, getAllTaggedNotes, getAllNotes } from './db';
-import { TabBar, ToastContainer, FAB } from './components';
+import { initDB, setDataChangeListener, getNotesByCategory, getAllTaggedNotes, getAllNotes } from './db';
+import { TabBar, ToastContainer, FAB, SyncSettings, type SyncStatus } from './components';
 import { NoteListPage, TagsPage, NoteEditPage } from './pages';
 import type { NoteEditPageHandle } from './pages/NoteEditPage/NoteEditPage';
 import { useSwipeBack } from './hooks/useSwipeBack';
+import { getSyncConfig } from './sync/gist';
+import { runSync, pushOnly } from './sync/sync';
+import { SYNC_PUSH_DEBOUNCE } from './utils/constants';
 import './App.css';
 
 type PageType = 'list' | 'create' | 'detail';
@@ -23,6 +26,19 @@ function App() {
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // ===== 多端同步（GitHub Gist） =====
+  const [showSyncSettings, setShowSyncSettings] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(() =>
+    getSyncConfig() ? 'idle' : 'unconfigured'
+  );
+  // 同步互斥与防抖推送（同步进行中触发的推送记为 pending，结束后补推）
+  const syncingRef = useRef(false);
+  const pendingPushRef = useRef(false);
+  const pushTimerRef = useRef<number | null>(null);
+  const runPushRef = useRef<() => void>(() => {});
+  // StrictMode 下 init effect 会执行两次，该标记保证启动同步只跑一次
+  const startupSyncedRef = useRef(false);
 
   // 二级页面（编辑页）容器与手势返回相关引用
   const listPageRef = useRef<HTMLDivElement>(null);
@@ -61,10 +77,123 @@ function App() {
     }
   }, [activeTab, showToast]);
 
+  // ===== 同步逻辑 =====
+
+  // 本地数据变更后的防抖推送（由 db 层监听触发）
+  const schedulePush = useCallback(() => {
+    if (!getSyncConfig()) return;
+    if (pushTimerRef.current !== null) {
+      clearTimeout(pushTimerRef.current);
+    }
+    pushTimerRef.current = window.setTimeout(() => {
+      pushTimerRef.current = null;
+      runPushRef.current();
+    }, SYNC_PUSH_DEBOUNCE);
+  }, []);
+
+  const runPush = useCallback(async () => {
+    const config = getSyncConfig();
+    if (!config) return;
+    // 正在同步（如启动拉取/手动同步）时挂起，结束后补推
+    if (syncingRef.current) {
+      pendingPushRef.current = true;
+      return;
+    }
+    syncingRef.current = true;
+    setSyncStatus('syncing');
+    try {
+      await pushOnly(config);
+      setSyncStatus('ok');
+    } catch (error) {
+      // 自动推送失败不打断用户，仅标记状态；下次变更或手动同步时会重试
+      setSyncStatus('error');
+      console.warn('自动推送失败:', error);
+    } finally {
+      syncingRef.current = false;
+      if (pendingPushRef.current) {
+        pendingPushRef.current = false;
+        schedulePush();
+      }
+    }
+  }, [schedulePush]);
+
+  useEffect(() => {
+    runPushRef.current = runPush;
+  }, [runPush]);
+
+  // 手动同步（设置面板"立即同步"）：拉取 + 合并 + 推送，带结果提示
+  const handleManualSync = useCallback(async () => {
+    const config = getSyncConfig();
+    if (!config || syncingRef.current) return;
+    syncingRef.current = true;
+    setSyncStatus('syncing');
+    try {
+      const result = await runSync(config);
+      setSyncStatus('ok');
+      if (result.pulled > 0) {
+        await loadNotes();
+        showToast(`已从云端更新 ${result.pulled} 条笔记`);
+      } else {
+        showToast('已是最新');
+      }
+    } catch (error) {
+      setSyncStatus('error');
+      showToast(error instanceof Error ? error.message : '同步失败');
+    } finally {
+      syncingRef.current = false;
+    }
+  }, [loadNotes, showToast]);
+
+  // 设置面板回调
+  const handleConfigSaved = useCallback(() => {
+    setSyncStatus('idle');
+    void handleManualSync();
+  }, [handleManualSync]);
+
+  const handleConfigCleared = useCallback(() => {
+    if (pushTimerRef.current !== null) {
+      clearTimeout(pushTimerRef.current);
+      pushTimerRef.current = null;
+    }
+    pendingPushRef.current = false;
+    setSyncStatus('unconfigured');
+  }, []);
+
+  // 监听本地数据变更 → 防抖推送
+  useEffect(() => {
+    setDataChangeListener(schedulePush);
+    return () => {
+      setDataChangeListener(null);
+      if (pushTimerRef.current !== null) {
+        clearTimeout(pushTimerRef.current);
+        pushTimerRef.current = null;
+      }
+    };
+  }, [schedulePush]);
+
   useEffect(() => {
     const init = async () => {
       try {
         await initDB();
+        // 启动同步：已配置则拉取云端较新数据（失败静默，不影响本地使用）
+        const config = getSyncConfig();
+        if (config && !startupSyncedRef.current) {
+          startupSyncedRef.current = true;
+          syncingRef.current = true;
+          setSyncStatus('syncing');
+          try {
+            const result = await runSync(config);
+            setSyncStatus('ok');
+            if (result.pulled > 0) {
+              console.log(`启动同步：从云端更新 ${result.pulled} 条笔记`);
+            }
+          } catch (error) {
+            setSyncStatus('error');
+            console.warn('启动同步失败:', error);
+          } finally {
+            syncingRef.current = false;
+          }
+        }
         await loadNotes();
         setIsLoading(false);
       } catch (error) {
@@ -301,6 +430,29 @@ function App() {
       {!isBatchMode && !showEditPage && activeTab !== 'tags' && (
         <FAB onClick={handleCreateNote} />
       )}
+
+      {/* 同步状态按钮 - 笔记列表页右上角（标签页右上角已有导出按钮，不重复放置） */}
+      {!isBatchMode && !showEditPage && activeTab !== 'tags' && (
+        <button
+          className={`sync-status-btn sync-status-btn-${syncStatus}`}
+          onClick={() => setShowSyncSettings(true)}
+          aria-label="多端同步设置"
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
+          </svg>
+        </button>
+      )}
+
+      {/* 多端同步设置面板 */}
+      <SyncSettings
+        isOpen={showSyncSettings}
+        syncStatus={syncStatus}
+        onClose={() => setShowSyncSettings(false)}
+        onManualSync={handleManualSync}
+        onConfigSaved={handleConfigSaved}
+        onConfigCleared={handleConfigCleared}
+      />
 
       {/* Edit Page - Always rendered, visibility controlled by CSS */}
       <div

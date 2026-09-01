@@ -17,6 +17,19 @@ interface ShiJiDB extends DBSchema {
 
 let db: IDBPDatabase<ShiJiDB> | null = null;
 
+// ===== 数据变更通知（供同步模块监听本地写入，触发防抖推送） =====
+
+type DataChangeListener = () => void;
+let dataChangeListener: DataChangeListener | null = null;
+
+export function setDataChangeListener(listener: DataChangeListener | null): void {
+  dataChangeListener = listener;
+}
+
+function notifyDataChange(): void {
+  dataChangeListener?.();
+}
+
 export async function initDB(): Promise<IDBPDatabase<ShiJiDB>> {
   if (db) return db;
 
@@ -100,6 +113,7 @@ export async function createNote(input: NoteInput): Promise<{ note: Note; warnin
 
   try {
     await db.add(STORE_NAME, note);
+    notifyDataChange();
     return { note, warnings };
   } catch (error) {
     if (error instanceof Error && error.name === 'QuotaExceededError') {
@@ -150,6 +164,7 @@ export async function updateNote(
 
   try {
     await db.put(STORE_NAME, updatedNote);
+    notifyDataChange();
     return { note: updatedNote, warnings };
   } catch (error) {
     if (error instanceof Error && error.name === 'QuotaExceededError') {
@@ -169,6 +184,7 @@ export async function softDeleteNote(id: string): Promise<void> {
   note.isDeleted = true;
   note.updatedAt = Date.now();
   await db.put(STORE_NAME, note);
+  notifyDataChange();
 }
 
 export async function batchSoftDeleteNote(ids: string[]): Promise<void> {
@@ -187,6 +203,7 @@ export async function batchSoftDeleteNote(ids: string[]): Promise<void> {
   }
 
   await tx.done;
+  notifyDataChange();
 }
 
 export async function getNoteById(id: string): Promise<Note | undefined> {
@@ -239,5 +256,6 @@ export async function updateNoteTagColor(id: string, tagColor: TagColor | null):
   note.tagColor = tagColor;
   note.updatedAt = Date.now();
   await db.put(STORE_NAME, note);
+  notifyDataChange();
   return note;
 }
