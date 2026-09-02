@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import type { Note, Category, TabType, ToastMessage } from './types';
 import { initDB, setDataChangeListener, getNotesByCategory, getAllTaggedNotes, getAllNotes } from './db';
 import { TabBar, ToastContainer, FAB, SyncSettings, ThemeToggle, type SyncStatus } from './components';
-import { NoteListPage, TagsPage, NoteEditPage } from './pages';
+import { NoteListPage, TagsPage } from './pages';
 import type { NoteEditPageHandle } from './pages/NoteEditPage/NoteEditPage';
 import { useSwipeBack } from './hooks/useSwipeBack';
 import { useTheme } from './hooks/useTheme';
@@ -12,6 +12,10 @@ import { SYNC_PUSH_DEBOUNCE } from './utils/constants';
 import './App.css';
 
 type PageType = 'list' | 'create' | 'detail';
+
+// 编辑页（含 Tiptap 编辑器，体积较大）懒加载：首次打开笔记时才拉取
+const importNoteEditPage = () => import('./pages/NoteEditPage/NoteEditPage');
+const NoteEditPage = lazy(importNoteEditPage);
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -50,6 +54,8 @@ function App() {
   const editPageHandleRef = useRef<NoteEditPageHandle>(null);
   const closeTimerRef = useRef<number | null>(null);
   const showEditPageRef = useRef(showEditPage);
+  // 编辑页组件首次打开后保持挂载（供滑出动画复用），懒加载由此触发
+  const [editPageMounted, setEditPageMounted] = useState(false);
   // 标记返回由应用内触发（返回按钮/侧滑手势），此时保存已在 handleBack 中完成；
   // 系统/浏览器返回手势触发 popstate 时该标记为 false，需在关闭前保存未落盘的修改。
   const appBackRef = useRef(false);
@@ -208,6 +214,22 @@ function App() {
     init();
   }, []);
 
+  // 首屏数据就绪后，趁空闲预拉取编辑页 chunk，避免首次打开笔记时等待（约 170KB gzip）
+  useEffect(() => {
+    if (isLoading || dbError) return;
+    // 与 lazy() 共用同一 import，模块级缓存保证只下载一次
+    const preload = () => {
+      void importNoteEditPage();
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(preload, { timeout: 3000 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+    // 不支持 requestIdleCallback 的环境（旧版 Safari）退化为延时触发
+    const timerId = window.setTimeout(preload, 1500);
+    return () => window.clearTimeout(timerId);
+  }, [isLoading, dbError]);
+
   useEffect(() => {
     if (!isLoading && !dbError) {
       loadNotes();
@@ -225,6 +247,11 @@ function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  // 打开编辑页：首次打开时挂载编辑页组件（懒加载触发点）
+  const mountEditPage = useCallback(() => {
+    setEditPageMounted(true);
+  }, []);
+
   // ===== 返回手势与浏览器历史的集成 =====
   // 打开编辑页时压入一条历史记录，使安卓系统返回手势 / 浏览器返回 / 物理返回键
   // 都会触发 popstate，与应用内返回走同一套滑出动画，互不冲突。
@@ -233,8 +260,9 @@ function App() {
       clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
+    mountEditPage();
     window.history.pushState({ ynote: 'edit' }, '');
-  }, []);
+  }, [mountEditPage]);
 
   // 统一的关闭动画（由 popstate 触发）
   const closeEditPage = useCallback(() => {
@@ -467,22 +495,26 @@ function App() {
         onConfigCleared={handleConfigCleared}
       />
 
-      {/* Edit Page - Always rendered, visibility controlled by CSS */}
-      <div
-        className={`app-page app-page-edit ${showEditPage ? 'page-edit-visible' : ''}`}
-        ref={editPageRef}
-      >
-        <NoteEditPage
-          ref={editPageHandleRef}
-          note={currentNote}
-          category={createCategory}
-          isCreating={isCreating}
-          onBack={handleBackToList}
-          onSave={handleSaveNote}
-          onDelete={handleDeleteNote}
-          onToast={showToast}
-        />
-      </div>
+      {/* Edit Page - 首次打开后保持挂载（动画用），可见性由 CSS 控制 */}
+      {editPageMounted && (
+        <div
+          className={`app-page app-page-edit ${showEditPage ? 'page-edit-visible' : ''}`}
+          ref={editPageRef}
+        >
+          <Suspense fallback={null}>
+            <NoteEditPage
+              ref={editPageHandleRef}
+              note={currentNote}
+              category={createCategory}
+              isCreating={isCreating}
+              onBack={handleBackToList}
+              onSave={handleSaveNote}
+              onDelete={handleDeleteNote}
+              onToast={showToast}
+            />
+          </Suspense>
+        </div>
+      )}
 
       <ToastContainer toasts={toasts} onClose={handleCloseToast} />
     </div>

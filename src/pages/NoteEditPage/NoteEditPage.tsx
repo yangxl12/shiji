@@ -1,10 +1,15 @@
 import { useState, useCallback, useEffect, useRef, useImperativeHandle } from 'react';
 import type { Ref } from 'react';
+import type { Editor } from '@tiptap/core';
 import type { Note, Category, TagColor } from '../../types';
 import { createNote, updateNote, softDeleteNote, updateNoteTagColor } from '../../db';
 import { getActiveAIModel } from '../../ai/config';
 import { optimizeNoteContent } from '../../ai/client';
 import { TagSelector, Modal, AISettings } from '../../components';
+// 编辑器直接从模块导入（绕过 barrel），确保 Tiptap 只进编辑页懒加载 chunk
+import { MarkdownEditor } from '../../components/MarkdownEditor/MarkdownEditor';
+import type { MarkdownEditorHandle } from '../../components/MarkdownEditor/MarkdownEditor';
+import { EditorToolbar } from '../../components/MarkdownEditor/EditorToolbar';
 import { useScrollState } from '../../hooks/useScrollState';
 import './NoteEditPage.css';
 
@@ -41,17 +46,25 @@ export function NoteEditPage({
   const [tagColor, setTagColor] = useState<TagColor | null>(note?.tagColor ?? null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  // ===== 编辑器（Tiptap WYSIWYG Markdown） =====
+  // sessionKey：笔记会话标识。切换笔记时变化 → 编辑器重挂载（隔离撤销历史）；
+  // 新建自动保存转编辑（stayEditing）不切换，避免打断输入
+  const [sessionKey, setSessionKey] = useState(() => note?.id ?? 'creating');
+  const [editor, setEditor] = useState<Editor | null>(null);
+  // 撤销/重做可用态：editor 实例可变，需在每次事务后重读（故存为状态而非渲染时现算）
+  const [undoRedo, setUndoRedo] = useState({ undo: false, redo: false });
+  const editorHandleRef = useRef<MarkdownEditorHandle>(null);
+  // 新建笔记时编辑器就绪后自动聚焦
+  const pendingFocusRef = useRef(false);
   // ===== AI 优化相关 =====
   const [showAISettings, setShowAISettings] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
-  // AI 优化的撤销/重做栈（会话级，离开页面即清空）
-  const [undoStack, setUndoStack] = useState<string[]>([]);
-  const [redoStack, setRedoStack] = useState<string[]>([]);
   const autoSaveTimerRef = useRef<number | null>(null);
-  const contentRef = useRef<HTMLTextAreaElement>(null);
+  // 滚动容器：正文区（编辑器在其内自然增高，由该容器滚动）
+  const contentRef = useRef<HTMLDivElement>(null);
   // 当前编辑笔记的标识：请求返回后若已切换笔记，则丢弃过期的 AI 结果
   const noteKeyRef = useRef<string>(note?.id ?? 'creating');
-  // 滚动联动：正文 textarea 是编辑页实际的滚动元素，顶/底栏据此玻璃化（纯表现层）
+  // 滚动联动：正文区是编辑页实际的滚动元素，顶/底栏据此玻璃化（纯表现层）
   const isScrolled = useScrollState(contentRef);
   // 自动保存创建笔记后，避免重置逻辑覆盖本地输入
   const stayEditingRef = useRef(false);
@@ -70,19 +83,17 @@ export function NoteEditPage({
       return;
     }
     noteKeyRef.current = note?.id ?? 'creating';
+    setSessionKey(note?.id ?? 'creating');
     setTitle(note?.title ?? '');
     setContent(note?.content ?? '');
     setTagColor(note?.tagColor ?? null);
     setShowDeleteModal(false);
     setHasChanges(false);
-    // 切换笔记时清空 AI 优化的历史栈
-    setUndoStack([]);
-    setRedoStack([]);
   }, [note?.id, isCreating]);
 
   useEffect(() => {
-    if (isCreating && contentRef.current) {
-      contentRef.current.focus();
+    if (isCreating) {
+      pendingFocusRef.current = true;
     }
   }, [isCreating]);
 
@@ -92,6 +103,28 @@ export function NoteEditPage({
     const tagChanged = tagColor !== originalTagColor;
     setHasChanges(titleChanged || contentChanged || tagChanged);
   }, [title, content, tagColor, originalTitle, originalContent, originalTagColor]);
+
+  const handleEditorReady = useCallback((instance: Editor | null) => {
+    setEditor(instance);
+    // 切换笔记会重挂载编辑器，可用态随之归零
+    setUndoRedo({ undo: false, redo: false });
+    if (instance && pendingFocusRef.current) {
+      pendingFocusRef.current = false;
+      instance.commands.focus('end');
+    }
+  }, []);
+
+  const handleEditorChange = useCallback((markdown: string) => {
+    setContent(markdown);
+  }, []);
+
+  // 任意事务后重读可用态（值不变则返回原对象，避免无谓重渲染）
+  const handleEditorTransaction = useCallback(() => {
+    setUndoRedo((prev) => {
+      const next = { undo: !!editor?.can().undo(), redo: !!editor?.can().redo() };
+      return prev.undo === next.undo && prev.redo === next.redo ? prev : next;
+    });
+  }, [editor]);
 
   // 统一的保存逻辑：新建时创建笔记并同步到父组件（后续自动转为更新），编辑时更新笔记
   const performSave = useCallback(async (silent: boolean): Promise<boolean> => {
@@ -197,7 +230,7 @@ export function NoteEditPage({
     setShowDeleteModal(false);
   }, [note, onDelete, onToast]);
 
-  // ===== AI 优化与撤销/重做 =====
+  // ===== AI 优化（结果经统一撤销时间线，Ctrl+Z / 撤销按钮可回退） =====
 
   const handleOptimize = useCallback(async () => {
     if (isOptimizing) return;
@@ -212,14 +245,11 @@ export function NoteEditPage({
       return;
     }
     const requestKey = noteKeyRef.current;
-    const snapshot = content;
     setIsOptimizing(true);
     try {
-      const optimized = await optimizeNoteContent(activeModel, snapshot);
+      const optimized = await optimizeNoteContent(activeModel, content);
       // 请求期间已切换/退出了笔记：丢弃过期结果，避免覆盖别的笔记
       if (noteKeyRef.current !== requestKey) return;
-      setUndoStack((prev) => [...prev, snapshot]);
-      setRedoStack([]);
       setContent(optimized);
       onToast('优化完成，可撤销');
     } catch (error) {
@@ -229,21 +259,17 @@ export function NoteEditPage({
     }
   }, [isOptimizing, content, onToast]);
 
+  // 撤销/重做：编辑器统一历史（打字、AI 优化同一条时间线）
   const handleUndo = useCallback(() => {
-    if (undoStack.length === 0) return;
-    const previous = undoStack[undoStack.length - 1];
-    setUndoStack((prev) => prev.slice(0, -1));
-    setRedoStack((prev) => [...prev, content]);
-    setContent(previous);
-  }, [undoStack, content]);
+    editor?.chain().focus().undo().run();
+  }, [editor]);
 
   const handleRedo = useCallback(() => {
-    if (redoStack.length === 0) return;
-    const next = redoStack[redoStack.length - 1];
-    setRedoStack((prev) => prev.slice(0, -1));
-    setUndoStack((prev) => [...prev, content]);
-    setContent(next);
-  }, [redoStack, content]);
+    editor?.chain().focus().redo().run();
+  }, [editor]);
+
+  const canUndo = undoRedo.undo;
+  const canRedo = undoRedo.redo;
 
   // 返回前先保存未落盘的修改
   const handleBack = useCallback(async (): Promise<boolean> => {
@@ -265,13 +291,13 @@ export function NoteEditPage({
   useImperativeHandle(ref, () => ({ requestBack: handleBack, saveCurrent }), [handleBack, saveCurrent]);
 
   return (
-    <div className="note-edit-page">
+    <div className={`note-edit-page${isOptimizing ? ' is-optimizing' : ''}`}>
       <div className={`note-edit-header${isScrolled ? ' is-scrolled' : ''}`}>
         <div className="note-edit-actions">
           <button
             className="note-view-action-btn"
             onClick={handleUndo}
-            disabled={undoStack.length === 0 || isOptimizing}
+            disabled={!canUndo || isOptimizing}
             title="撤销"
             aria-label="撤销"
           >
@@ -282,7 +308,7 @@ export function NoteEditPage({
           <button
             className="note-view-action-btn"
             onClick={handleRedo}
-            disabled={redoStack.length === 0 || isOptimizing}
+            disabled={!canRedo || isOptimizing}
             title="重做"
             aria-label="重做"
           >
@@ -319,7 +345,7 @@ export function NoteEditPage({
         </div>
       </div>
 
-      <div className="note-edit-content">
+      <div className="note-edit-content" ref={contentRef}>
         <input
           type="text"
           className="note-edit-input-title"
@@ -327,43 +353,44 @@ export function NoteEditPage({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <textarea
-          ref={contentRef}
-          className="note-edit-input-content"
-          placeholder="开始记录..."
+        <MarkdownEditor
+          key={sessionKey}
+          ref={editorHandleRef}
           value={content}
-          disabled={isOptimizing}
-          onChange={(e) => {
-            setContent(e.target.value);
-            // 手动编辑会使重做分支失效（编辑器标准行为）
-            if (redoStack.length > 0) setRedoStack([]);
-          }}
+          onChange={handleEditorChange}
+          onReady={handleEditorReady}
+          onTransaction={handleEditorTransaction}
+          editable={!isOptimizing}
+          placeholder="开始记录..."
         />
       </div>
 
       <div className={`note-edit-footer${isScrolled ? ' is-scrolled' : ''}`}>
-        <button
-          className="note-view-action-btn"
-          onClick={handleBack}
-          title="返回"
-        >
-          <svg viewBox="0 0 24 24">
-            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
-          </svg>
-        </button>
-        <div style={{ flex: 1 }} />
-        <TagSelector selectedTag={tagColor} onChange={handleTagChange} />
-        {!isCreating && (
+        {editor && <EditorToolbar editor={editor} disabled={isOptimizing} />}
+        <div className="note-edit-footer-row">
           <button
-            className="note-view-action-btn note-view-action-btn-delete"
-            onClick={() => setShowDeleteModal(true)}
-            title="删除"
+            className="note-view-action-btn"
+            onClick={handleBack}
+            title="返回"
           >
             <svg viewBox="0 0 24 24">
-              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
             </svg>
           </button>
-        )}
+          <div style={{ flex: 1 }} />
+          <TagSelector selectedTag={tagColor} onChange={handleTagChange} />
+          {!isCreating && (
+            <button
+              className="note-view-action-btn note-view-action-btn-delete"
+              onClick={() => setShowDeleteModal(true)}
+              title="删除"
+            >
+              <svg viewBox="0 0 24 24">
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <Modal
@@ -385,3 +412,5 @@ export function NoteEditPage({
     </div>
   );
 }
+
+export default NoteEditPage;

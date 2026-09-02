@@ -69,6 +69,8 @@
   gap: 16px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* 正文由 MarkdownEditor 渲染（.md-editor），点击空白落到编辑器 */
+  cursor: text;
 }
 
 .note-edit-input-title {
@@ -86,22 +88,6 @@
   font-weight: 400;
 }
 
-.note-edit-input-content {
-  flex: 1;
-  font: var(--text-body);
-  color: var(--ink-700);
-  border: none;
-  background: none;
-  outline: none;
-  padding: 0;
-  resize: none;
-  font-family: inherit;
-}
-
-.note-edit-input-content::placeholder {
-  color: var(--ink-300);
-}
-
 /* 底栏：透明置底，滚动后玻璃化（与顶栏共享 is-scrolled） */
 .note-edit-footer {
   position: fixed;
@@ -110,9 +96,7 @@
   right: 0;
   padding: 8px 16px calc(8px + var(--bottom-safe));
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
   z-index: 99;
   border-top: 1px solid transparent;
   transition: border-color var(--dur-base) var(--ease-standard);
@@ -138,6 +122,14 @@
 
 .note-edit-footer.is-scrolled {
   border-top-color: var(--hairline);
+}
+
+/* 底栏主行：返回 / 标签 / 删除 */
+.note-edit-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .note-view-action-btn {
@@ -192,11 +184,7 @@
   }
 }
 
-/* AI 优化请求期间锁定正文，避免结果覆盖期间的手动编辑 */
-.note-edit-input-content:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
+/* AI 优化请求期间锁定正文（编辑器 editable=false + 视觉反馈），样式见 MarkdownEditor.css */
 
 .note-view-action-btn-delete {
   color: var(--ink-300);
@@ -219,7 +207,7 @@
     font: var(--text-display);
   }
 
-  .note-edit-input-content {
+  .md-editor .ProseMirror {
     font-size: 17px;
     line-height: 1.9;
   }

@@ -1,7 +1,8 @@
-import { useRef, useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { useRef, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type { Note, TagColor } from '../../types';
 import { TAG_COLORS } from '../../utils/constants';
 import { formatRelativeTime } from '../../utils/time';
+import { markdownToPlainText } from '../../utils/markdown';
 import './NoteCard.css';
 
 interface NoteCardProps {
@@ -218,8 +219,10 @@ export function NoteCard({
   }
 
   const tagColor = getTagColor(note.tagColor);
-  const displayTitle = note.title || note.content.slice(0, 20);
-  const isPlaceholderTitle = !note.title && note.content;
+  // 卡片预览用纯文本：剥离 Markdown 语法，仅作展示
+  const plainContent = useMemo(() => markdownToPlainText(note.content), [note.content]);
+  const displayTitle = note.title || plainContent.slice(0, 20);
+  const isPlaceholderTitle = !note.title && !!note.content;
 
   // 纯展示用 CSS 变量：--tag-c 标签色（色点及光环）、--i 首屏编排索引（前 8 张）
   const cardStyle = {
@@ -300,7 +303,7 @@ export function NoteCard({
         >
           {note.content && (note.title || showOpen) && (
             <div className="note-card-content" onClick={handleContentClick}>
-              {note.content}
+              {plainContent}
             </div>
           )}
           {showOpen && (
