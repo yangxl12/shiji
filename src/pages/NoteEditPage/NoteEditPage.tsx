@@ -2,7 +2,9 @@ import { useState, useCallback, useEffect, useRef, useImperativeHandle } from 'r
 import type { Ref } from 'react';
 import type { Note, Category, TagColor } from '../../types';
 import { createNote, updateNote, softDeleteNote, updateNoteTagColor } from '../../db';
-import { TagSelector, Modal } from '../../components';
+import { getActiveAIModel } from '../../ai/config';
+import { optimizeNoteContent } from '../../ai/client';
+import { TagSelector, Modal, AISettings } from '../../components';
 import { useScrollState } from '../../hooks/useScrollState';
 import './NoteEditPage.css';
 
@@ -39,8 +41,16 @@ export function NoteEditPage({
   const [tagColor, setTagColor] = useState<TagColor | null>(note?.tagColor ?? null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  // ===== AI 优化相关 =====
+  const [showAISettings, setShowAISettings] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  // AI 优化的撤销/重做栈（会话级，离开页面即清空）
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
   const autoSaveTimerRef = useRef<number | null>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  // 当前编辑笔记的标识：请求返回后若已切换笔记，则丢弃过期的 AI 结果
+  const noteKeyRef = useRef<string>(note?.id ?? 'creating');
   // 滚动联动：正文 textarea 是编辑页实际的滚动元素，顶/底栏据此玻璃化（纯表现层）
   const isScrolled = useScrollState(contentRef);
   // 自动保存创建笔记后，避免重置逻辑覆盖本地输入
@@ -55,14 +65,19 @@ export function NoteEditPage({
   // Reset form state when note or isCreating changes
   useEffect(() => {
     if (stayEditingRef.current) {
+      // 新建自动保存转为编辑：不算切换笔记，AI 请求标识保持不变
       stayEditingRef.current = false;
       return;
     }
+    noteKeyRef.current = note?.id ?? 'creating';
     setTitle(note?.title ?? '');
     setContent(note?.content ?? '');
     setTagColor(note?.tagColor ?? null);
     setShowDeleteModal(false);
     setHasChanges(false);
+    // 切换笔记时清空 AI 优化的历史栈
+    setUndoStack([]);
+    setRedoStack([]);
   }, [note?.id, isCreating]);
 
   useEffect(() => {
@@ -182,6 +197,54 @@ export function NoteEditPage({
     setShowDeleteModal(false);
   }, [note, onDelete, onToast]);
 
+  // ===== AI 优化与撤销/重做 =====
+
+  const handleOptimize = useCallback(async () => {
+    if (isOptimizing) return;
+    if (!content.trim()) {
+      onToast('请先输入内容');
+      return;
+    }
+    const activeModel = getActiveAIModel();
+    if (!activeModel) {
+      setShowAISettings(true);
+      onToast('请先配置 AI 模型');
+      return;
+    }
+    const requestKey = noteKeyRef.current;
+    const snapshot = content;
+    setIsOptimizing(true);
+    try {
+      const optimized = await optimizeNoteContent(activeModel, snapshot);
+      // 请求期间已切换/退出了笔记：丢弃过期结果，避免覆盖别的笔记
+      if (noteKeyRef.current !== requestKey) return;
+      setUndoStack((prev) => [...prev, snapshot]);
+      setRedoStack([]);
+      setContent(optimized);
+      onToast('优化完成，可撤销');
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : '优化失败');
+    } finally {
+      setIsOptimizing(false);
+    }
+  }, [isOptimizing, content, onToast]);
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    const previous = undoStack[undoStack.length - 1];
+    setUndoStack((prev) => prev.slice(0, -1));
+    setRedoStack((prev) => [...prev, content]);
+    setContent(previous);
+  }, [undoStack, content]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack((prev) => prev.slice(0, -1));
+    setUndoStack((prev) => [...prev, content]);
+    setContent(next);
+  }, [redoStack, content]);
+
   // 返回前先保存未落盘的修改
   const handleBack = useCallback(async (): Promise<boolean> => {
     const saved = await performSave(false);
@@ -204,11 +267,56 @@ export function NoteEditPage({
   return (
     <div className="note-edit-page">
       <div className={`note-edit-header${isScrolled ? ' is-scrolled' : ''}`}>
-        <div className="note-edit-actions" />
+        <div className="note-edit-actions">
+          <button
+            className="note-view-action-btn"
+            onClick={handleUndo}
+            disabled={undoStack.length === 0 || isOptimizing}
+            title="撤销"
+            aria-label="撤销"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
+            </svg>
+          </button>
+          <button
+            className="note-view-action-btn"
+            onClick={handleRedo}
+            disabled={redoStack.length === 0 || isOptimizing}
+            title="重做"
+            aria-label="重做"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z" />
+            </svg>
+          </button>
+        </div>
         <h1 className="note-edit-title">
           {isCreating ? '新建笔记' : '编辑笔记'}
         </h1>
-        <div className="note-edit-actions" />
+        <div className="note-edit-actions">
+          <button
+            className={`note-view-action-btn note-view-action-btn-ai${isOptimizing ? ' is-optimizing' : ''}`}
+            onClick={() => void handleOptimize()}
+            disabled={isOptimizing}
+            title="AI 优化"
+            aria-label="AI 优化"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="m19 9 1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z" />
+            </svg>
+          </button>
+          <button
+            className="note-view-action-btn"
+            onClick={() => setShowAISettings(true)}
+            title="AI 模型设置"
+            aria-label="AI 模型设置"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="note-edit-content">
@@ -224,7 +332,12 @@ export function NoteEditPage({
           className="note-edit-input-content"
           placeholder="开始记录..."
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          disabled={isOptimizing}
+          onChange={(e) => {
+            setContent(e.target.value);
+            // 手动编辑会使重做分支失效（编辑器标准行为）
+            if (redoStack.length > 0) setRedoStack([]);
+          }}
         />
       </div>
 
@@ -262,6 +375,12 @@ export function NoteEditPage({
         isDanger={true}
         onCancel={() => setShowDeleteModal(false)}
         onConfirm={handleDelete}
+      />
+
+      <AISettings
+        isOpen={showAISettings}
+        onClose={() => setShowAISettings(false)}
+        onToast={onToast}
       />
     </div>
   );

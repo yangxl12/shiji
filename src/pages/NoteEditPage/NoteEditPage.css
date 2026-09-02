@@ -162,10 +162,40 @@
   color: var(--ink-900);
 }
 
+.note-view-action-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
 .note-view-action-btn svg {
   width: 22px;
   height: 22px;
   fill: currentColor;
+}
+
+/* AI 优化按钮：靛紫点缀，优化中旋转反馈 */
+.note-view-action-btn-ai {
+  color: var(--brand-hue);
+}
+
+.note-view-action-btn-ai.is-optimizing svg {
+  animation: ai-optimizing-spin 1s linear infinite;
+}
+
+@keyframes ai-optimizing-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* AI 优化请求期间锁定正文，避免结果覆盖期间的手动编辑 */
+.note-edit-input-content:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 
 .note-view-action-btn-delete {

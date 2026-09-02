@@ -1,0 +1,122 @@
+/* 复用同步设置面板的抽屉 / 表单 / 按钮样式（sync-* 类） */
+@import '../SyncSettings/SyncSettings.css';
+
+/* ===== 模型列表 ===== */
+
+.ai-model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.ai-model-item {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-btn);
+  background: var(--surface);
+  padding: 10px 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+.ai-model-item.is-active {
+  border-color: var(--brand-hue);
+  box-shadow: 0 0 0 2px var(--brand-hue-soft);
+}
+
+.ai-model-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* 单选圆点：选中时以 --bg 挖出内圈 */
+.ai-model-radio {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--ink-300);
+  flex-shrink: 0;
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
+}
+
+.ai-model-item.is-active .ai-model-radio {
+  border-color: var(--brand-hue);
+  background: var(--brand-hue);
+  box-shadow: inset 0 0 0 3px var(--surface);
+}
+
+.ai-model-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-model-active-tag {
+  font-size: 11px;
+  color: var(--brand-hue);
+  background: var(--brand-hue-soft);
+  border-radius: 999px;
+  padding: 1px 8px;
+  flex-shrink: 0;
+}
+
+.ai-model-meta {
+  font: var(--text-caption);
+  color: var(--ink-500);
+  margin-top: 4px;
+  word-break: break-all;
+}
+
+.ai-model-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ai-mini-btn {
+  font-size: 12px;
+  font-family: inherit;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: none;
+  background: var(--surface-2);
+  color: var(--ink-700);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter var(--dur-fast) var(--ease-standard);
+}
+
+.ai-mini-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ai-mini-btn-danger {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* hover：仅鼠标设备 */
+@media (hover: hover) and (pointer: fine) {
+  .ai-model-item:hover {
+    border-color: var(--ink-300);
+  }
+
+  .ai-model-item.is-active:hover {
+    border-color: var(--brand-hue);
+  }
+
+  .ai-mini-btn:not(:disabled):hover {
+    filter: brightness(1.04);
+  }
+}
