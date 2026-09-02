@@ -62,7 +62,8 @@
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
+  /* 抽屉贴遮罩底边：键盘弹出时随 --kb-inset 上移，输入区不被键盘压住 */
+  bottom: var(--kb-inset, 0px);
   background: rgba(20, 20, 24, 0.32);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
@@ -83,7 +84,8 @@
   max-width: 480px;
   border-radius: var(--radius-modal) var(--radius-modal) 0 0;
   padding: 12px 16px calc(20px + var(--bottom-safe));
-  max-height: 85vh;
+  /* 平时不超过 85vh；键盘弹出后遮罩变矮，以遮罩高度为准，避免抽屉顶出屏幕 */
+  max-height: min(85vh, 100%);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   box-shadow:

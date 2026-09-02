@@ -1,6 +1,7 @@
 .note-edit-page {
-  height: 100%;
-  min-height: 100%;
+  /* 高度必须写 calc 而非 100%：固定定位元素同时指定 height 与 top/bottom 时
+     属于过度约束，bottom 会被忽略，键盘抬升就会失效 */
+  height: calc(100% - var(--kb-inset, 0px));
   /* 底色与环境光由外层 .app-page-edit 提供 */
   background: transparent;
   display: flex;
@@ -9,7 +10,9 @@
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
+  /* --kb-inset：软键盘遮挡高度，由 useKeyboardInset 动态写入（桌面端 0px）。
+     键盘弹出时整页收缩到键盘上方，正文区随之变矮，光标才不会被键盘压住 */
+  bottom: var(--kb-inset, 0px);
 }
 
 /* 顶栏：置顶透明，滚动后玻璃化（.is-scrolled 由 useScrollState 驱动） */
@@ -91,7 +94,8 @@
 /* 底栏：透明置底，滚动后玻璃化（与顶栏共享 is-scrolled） */
 .note-edit-footer {
   position: fixed;
-  bottom: 0;
+  /* 与整页同步抬升：iOS 键盘弹出时布局视口不变，fixed 底栏否则会被键盘遮住 */
+  bottom: var(--kb-inset, 0px);
   left: 0;
   right: 0;
   padding: 8px 16px calc(8px + var(--bottom-safe));

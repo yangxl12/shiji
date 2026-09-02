@@ -66,6 +66,7 @@ export function NoteEditPage({
   const noteKeyRef = useRef<string>(note?.id ?? 'creating');
   // 滚动联动：正文区是编辑页实际的滚动元素，顶/底栏据此玻璃化（纯表现层）
   const isScrolled = useScrollState(contentRef);
+  // 软键盘遮挡高度 --kb-inset 由 App 根下发（桌面端 0px），见 NoteEditPage.css
   // 自动保存创建笔记后，避免重置逻辑覆盖本地输入
   const stayEditingRef = useRef(false);
   // 防止自动创建与返回时的保存重复创建笔记

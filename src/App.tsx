@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import type { CSSProperties } from 'react';
 import type { Note, Category, TabType, ToastMessage } from './types';
 import { initDB, setDataChangeListener, getNotesByCategory, getAllTaggedNotes, getAllNotes } from './db';
 import { TabBar, ToastContainer, FAB, SyncSettings, ThemeToggle, type SyncStatus } from './components';
@@ -6,6 +7,7 @@ import { NoteListPage, TagsPage } from './pages';
 import type { NoteEditPageHandle } from './pages/NoteEditPage/NoteEditPage';
 import { useSwipeBack } from './hooks/useSwipeBack';
 import { useTheme } from './hooks/useTheme';
+import { useKeyboardInset } from './hooks/useKeyboardInset';
 import { getSyncConfig } from './sync/gist';
 import { runSync, pushOnly } from './sync/sync';
 import { SYNC_PUSH_DEBOUNCE } from './utils/constants';
@@ -34,6 +36,10 @@ function App() {
 
   // ===== 主题（浅色 / 深色 / 跟随系统） =====
   const { themeMode, setThemeMode } = useTheme();
+
+  // ===== 软键盘遮挡高度（移动端） =====
+  // 以 CSS 变量 --kb-inset 下发给子树：编辑页整页与底栏、设置抽屉据此抬到键盘上方
+  const keyboardInset = useKeyboardInset();
 
   // ===== 多端同步（GitHub Gist） =====
   const [showSyncSettings, setShowSyncSettings] = useState(false);
@@ -418,7 +424,7 @@ function App() {
   const isCreating = currentPage === 'create';
 
   return (
-    <div className="app">
+    <div className="app" style={{ '--kb-inset': `${keyboardInset}px` } as CSSProperties}>
       {/* List Page - Always rendered */}
       <div
         className={`app-page app-page-list ${showEditPage ? 'page-list-behind' : ''}`}

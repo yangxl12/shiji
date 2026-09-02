@@ -6,7 +6,9 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <link rel="manifest" href="./manifest.json" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- interactive-widget=resizes-content：软键盘弹出时收缩布局视口，
+         使 position:fixed 的底栏落在键盘上方（iOS 不支持该属性，由 useKeyboardInset 兜底） -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#F7F7FA" />
     <meta name="background-color" content="#F7F7FA" />
     <meta name="mobile-web-app-capable" content="yes" />
