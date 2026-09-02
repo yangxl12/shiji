@@ -66,32 +66,33 @@
   gap: 8px;
 }
 
-/* Export button */
+/* Export button：与标签筛选 icon 同规格的 32px 圆钮，保持顶栏视觉一致 */
 .tags-export-btn {
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
-  border: none;
-  border-radius: var(--radius-btn);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-chip);
   cursor: pointer;
   color: var(--ink-500);
   transition:
     background-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard);
+    color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-standard);
   -webkit-tap-highlight-color: transparent;
 }
 
 .tags-export-btn:active {
-  background: var(--surface-2);
+  transform: scale(0.9);
   color: var(--ink-900);
 }
 
 .tags-export-btn svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   fill: currentColor;
 }
 
@@ -101,7 +102,8 @@
 }
 
 .tags-export-btn:disabled:active {
-  background: none;
+  transform: none;
+  color: var(--ink-500);
 }
 
 @media (hover: hover) and (pointer: fine) {

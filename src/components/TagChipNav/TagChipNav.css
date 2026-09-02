@@ -1,3 +1,5 @@
+/* 图标式标签筛选：无文字，语义经 title / aria-label 提供；
+   总宽固定且较短（5 × 32px），不会伸入右上角主题切换按钮的固定区域 */
 .tag-chip-nav {
   display: flex;
   align-items: center;
@@ -6,9 +8,6 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   padding-right: 8px;
-  /* 右缘线性渐隐：提示可继续滑动（避免内容被硬切断） */
-  mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
 }
 
 .tag-chip-nav::-webkit-scrollbar {
@@ -18,41 +17,40 @@
 .tag-chip {
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 28px;
-  padding: 0 10px;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex-shrink: 0;
   border-radius: var(--radius-chip);
   background: var(--surface-2);
-  color: var(--ink-500);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  -webkit-tap-highlight-color: transparent;
   border: 1px solid transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  opacity: 0.62;
   transition:
     background-color var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard),
     border-color var(--dur-fast) var(--ease-standard),
+    opacity var(--dur-fast) var(--ease-standard),
     transform var(--dur-fast) var(--ease-standard);
 }
 
 .tag-chip:active {
-  transform: scale(0.96);
+  transform: scale(0.9);
 }
 
-.tag-chip-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+.tag-chip svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
-/* 选中 chip：G3 点缀玻璃 + 原色系描边 */
+/* 选中 chip：G3 点缀玻璃 + 原色系描边，图标点亮 */
 .tag-chip-selected {
   background: var(--glass-chip-bg);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  color: var(--ink-900);
+  opacity: 1;
 }
 
 .tag-chip-selected.tag-chip-red {
@@ -71,24 +69,12 @@
   border-color: var(--tag-gray);
 }
 
-.tag-chip-dot-all {
-  background: linear-gradient(
-    135deg,
-    var(--tag-red) 25%,
-    var(--tag-orange) 25%,
-    var(--tag-orange) 50%,
-    var(--tag-yellow) 50%,
-    var(--tag-yellow) 75%,
-    var(--tag-gray) 75%
-  );
-}
-
 .tag-chip-selected.tag-chip-all {
   border-color: var(--ink-900);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .tag-chip:not(.tag-chip-selected):hover {
-    color: var(--ink-700);
+    opacity: 0.9;
   }
 }
