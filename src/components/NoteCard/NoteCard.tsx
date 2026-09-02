@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import type { Note, TagColor } from '../../types';
 import { TAG_COLORS } from '../../utils/constants';
 import { formatRelativeTime } from '../../utils/time';
@@ -105,6 +105,101 @@ export function NoteCard({
     e.preventDefault();
   }, []);
 
+  // ── 卡内快速展开 / 收起（手风琴）：高度动画走命令式 style，React 状态只管视觉 ──
+  const [expanded, setExpanded] = useState(false);
+  const [collapsing, setCollapsing] = useState(false);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const collapsedHeightRef = useRef(0);
+  const animDirRef = useRef<'expand' | 'collapse' | null>(null);
+  const reduceMotion = useRef(
+    typeof window !== 'undefined' &&
+      !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  );
+
+  /** 逻辑展开态（aria / 按钮语义）；批量模式下强制视为收起 */
+  const isOpen = expanded && !isBatchMode;
+  /** 视觉展开态：解除两行截断并渲染「收起」按钮；收起动画期间保持 true，避免内容先跳变为截断态 */
+  const showOpen = (expanded || collapsing) && !isBatchMode;
+
+  // 按钮交互不应触发卡片长按（多选）与点击（进入编辑）
+  const stopEventPropagation = useCallback((e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleToggleExpand = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isBatchMode) return;
+    const body = bodyRef.current;
+
+    // 减动效偏好：跳过高度动画，直接切换
+    if (reduceMotion.current || !body) {
+      animDirRef.current = null;
+      setCollapsing(false);
+      setExpanded((v) => !v);
+      return;
+    }
+
+    if (expanded) {
+      // 收起：冻结当前渲染高度，下一帧过渡回收纳高度
+      body.style.height = `${body.clientHeight}px`;
+      animDirRef.current = 'collapse';
+      setExpanded(false);
+      setCollapsing(true);
+    } else {
+      // 展开：冻结当前高度作为动画起点；仅在静止时更新收纳基准（避免快速连点覆盖基准值）
+      if (animDirRef.current === null) {
+        collapsedHeightRef.current = body.clientHeight;
+      }
+      body.style.height = `${body.clientHeight}px`;
+      animDirRef.current = 'expand';
+      setCollapsing(false);
+      setExpanded(true);
+    }
+  }, [expanded, isBatchMode]);
+
+  // DOM 提交后再测目标高度并启动过渡（强制 reflow 让起始高度先生效，否则会被合并成一次跳变）；
+  // 批量模式下清掉动画残留的内联高度
+  useLayoutEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    if (isBatchMode) {
+      animDirRef.current = null;
+      body.style.removeProperty('height');
+      return;
+    }
+    if (!animDirRef.current) return;
+    void body.offsetHeight;
+    const target =
+      animDirRef.current === 'expand' ? body.scrollHeight : collapsedHeightRef.current;
+    body.style.height = `${target}px`;
+  }, [expanded, collapsing, isBatchMode]);
+
+  // 过渡结束：展开回 auto（自适应后续内容/主题变化），收起移除内联高度恢复截断态
+  const handleBodyTransitionEnd = useCallback(
+    (e: React.TransitionEvent<HTMLDivElement>) => {
+      const body = bodyRef.current;
+      if (e.target !== body || e.propertyName !== 'height' || !animDirRef.current) return;
+      animDirRef.current = null;
+      if (expanded) {
+        body.style.height = 'auto';
+      } else {
+        body.style.removeProperty('height');
+        setCollapsing(false);
+      }
+    },
+    [expanded]
+  );
+
+  // 进入批量模式时重置展开态（渲染期 prop 适配写法，避免 effect 级联渲染）
+  const [wasBatchMode, setWasBatchMode] = useState(isBatchMode);
+  if (wasBatchMode !== isBatchMode) {
+    setWasBatchMode(isBatchMode);
+    if (isBatchMode) {
+      setExpanded(false);
+      setCollapsing(false);
+    }
+  }
+
   const tagColor = getTagColor(note.tagColor);
   const displayTitle = note.title || note.content.slice(0, 20);
   const isPlaceholderTitle = !note.title && note.content;
@@ -119,7 +214,9 @@ export function NoteCard({
     <div className="note-card-wrapper">
       {/* Card Content */}
       <div
-        className={`note-card ${isBatchMode ? 'note-card-batch' : ''}`}
+        className={`note-card ${isBatchMode ? 'note-card-batch' : ''} ${
+          showOpen ? 'note-card-open' : ''
+        }`}
         style={cardStyle}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
@@ -145,6 +242,28 @@ export function NoteCard({
           </div>
         )}
         <div className="note-card-header">
+          {!isBatchMode && (
+            <button
+              type="button"
+              className="note-card-toggle"
+              aria-expanded={isOpen}
+              aria-label={isOpen ? '收起笔记' : '展开笔记'}
+              onClick={handleToggleExpand}
+              onMouseDown={stopEventPropagation}
+              onTouchStart={stopEventPropagation}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M6 9.5l6 6 6-6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
           <div
             className={`note-card-title ${
               isPlaceholderTitle ? 'note-card-placeholder-title' : ''
@@ -156,9 +275,39 @@ export function NoteCard({
             <div className="note-card-tag" />
           )}
         </div>
-        {note.title && note.content && (
-          <div className="note-card-content">{note.content}</div>
-        )}
+        {/* 高度过渡容器：收起时裁剪为两行，展开时随内容向下拉伸 */}
+        <div
+          className="note-card-body"
+          ref={bodyRef}
+          onTransitionEnd={handleBodyTransitionEnd}
+        >
+          {note.content && (note.title || showOpen) && (
+            <div className="note-card-content">{note.content}</div>
+          )}
+          {showOpen && (
+            <div className="note-card-collapse-footer">
+              <button
+                type="button"
+                className="note-card-collapse-btn"
+                onClick={handleToggleExpand}
+                onMouseDown={stopEventPropagation}
+                onTouchStart={stopEventPropagation}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M18 15l-6-6-6 6"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                收起
+              </button>
+            </div>
+          )}
+        </div>
         <div className="note-card-time">{formatRelativeTime(note.updatedAt)}</div>
       </div>
     </div>

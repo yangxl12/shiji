@@ -100,6 +100,112 @@
   margin-top: 8px;
 }
 
+/* ===== 卡内展开 / 收起 ===== */
+
+/* 头部左侧切换按钮：小圆形描边 + 箭头，展开时旋转 180° 兼作「顶部收起」 */
+.note-card-toggle {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink-500);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.note-card-toggle svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  transition: transform var(--dur-base) var(--ease-spring);
+}
+
+.note-card-toggle:active {
+  transform: scale(0.85);
+}
+
+/* 展开态：箭头转向上方（收起），按钮染品牌色提示当前状态 */
+.note-card-open .note-card-toggle {
+  background: var(--brand-hue-soft);
+  border-color: transparent;
+  color: var(--brand-hue);
+}
+
+.note-card-open .note-card-toggle svg {
+  transform: rotate(180deg);
+}
+
+/* 高度过渡容器：收起时裁剪两行，展开时随内容向下拉伸 */
+.note-card-body {
+  overflow: hidden;
+  transition: height var(--dur-slow) var(--ease-standard);
+}
+
+/* 展开态内容：解除两行截断，保留换行 */
+.note-card-open .note-card-content {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+/* 展开末尾的「收起」胶囊按钮 */
+.note-card-collapse-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+  animation: collapse-footer-in var(--dur-base) var(--ease-decelerate);
+}
+
+@keyframes collapse-footer-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.note-card-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-chip);
+  background: var(--surface-2);
+  color: var(--ink-500);
+  font: var(--text-micro);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.note-card-collapse-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.note-card-collapse-btn:active {
+  transform: scale(0.94);
+}
+
 /* Checkbox for batch mode */
 .note-card-checkbox {
   position: absolute;
@@ -174,6 +280,13 @@
   .note-card:hover::after {
     opacity: 1;
   }
+
+  .note-card-toggle:hover,
+  .note-card-collapse-btn:hover {
+    background: var(--brand-hue-soft);
+    border-color: transparent;
+    color: var(--brand-hue);
+  }
 }
 
 /* ===== 桌面端适配（≥768px）：网格布局下间距由 gap 控制 ===== */
@@ -191,7 +304,12 @@
     overflow: hidden;
   }
 
-  .note-card-content {
+  /* 展开卡片突破固定高度，随内容自然拉伸 */
+  .note-card.note-card-open {
+    height: auto;
+  }
+
+  .note-card-body {
     flex: 1;
     min-height: 0;
   }
