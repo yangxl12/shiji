@@ -86,20 +86,6 @@ export function NoteCard({
     clearLongPressTimer();
   }, [clearLongPressTimer]);
 
-  const handleClick = useCallback(() => {
-    // 长按已触发，抑制随后的点击（避免误触/重复选中）
-    if (longPressFiredRef.current) {
-      longPressFiredRef.current = false;
-      return;
-    }
-
-    if (isBatchMode) {
-      onToggleSelect();
-    } else {
-      onClick();
-    }
-  }, [isBatchMode, onClick, onToggleSelect]);
-
   // 长按会触发浏览器上下文菜单（桌面右键/移动长按选择），进入多选模式时需屏蔽
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -126,8 +112,7 @@ export function NoteCard({
     e.stopPropagation();
   }, []);
 
-  const handleToggleExpand = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleExpand = useCallback(() => {
     if (isBatchMode) return;
     const body = bodyRef.current;
 
@@ -156,6 +141,38 @@ export function NoteCard({
       setExpanded(true);
     }
   }, [expanded, isBatchMode]);
+
+  const handleToggleExpand = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleExpand();
+  }, [toggleExpand]);
+
+  // 卡片级点击（标题行/时间/空白区域）：批量模式切换选中；普通模式展开/收起
+  const handleCardClick = useCallback(() => {
+    // 长按已触发，抑制随后的点击（避免误触/重复选中）
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false;
+      return;
+    }
+
+    if (isBatchMode) {
+      onToggleSelect();
+    } else {
+      toggleExpand();
+    }
+  }, [isBatchMode, onToggleSelect, toggleExpand]);
+
+  // 内容区点击：进入笔记详情（批量模式下冒泡给卡片级处理选中）
+  const handleContentClick = useCallback((e: React.MouseEvent) => {
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false;
+      return;
+    }
+
+    if (isBatchMode) return;
+    e.stopPropagation();
+    onClick();
+  }, [isBatchMode, onClick]);
 
   // DOM 提交后再测目标高度并启动过渡（强制 reflow 让起始高度先生效，否则会被合并成一次跳变）；
   // 批量模式下清掉动画残留的内联高度
@@ -218,7 +235,7 @@ export function NoteCard({
           showOpen ? 'note-card-open' : ''
         }`}
         style={cardStyle}
-        onClick={handleClick}
+        onClick={handleCardClick}
         onContextMenu={handleContextMenu}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -282,7 +299,9 @@ export function NoteCard({
           onTransitionEnd={handleBodyTransitionEnd}
         >
           {note.content && (note.title || showOpen) && (
-            <div className="note-card-content">{note.content}</div>
+            <div className="note-card-content" onClick={handleContentClick}>
+              {note.content}
+            </div>
           )}
           {showOpen && (
             <div className="note-card-collapse-footer">
