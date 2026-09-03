@@ -24,6 +24,8 @@ interface NoteEditPageProps {
   note?: Note | null;
   category?: Category;
   isCreating: boolean;
+  /** 软键盘遮挡高度（App 根经 useKeyboardInset 测量下发），0/未传表示键盘未弹出 */
+  keyboardInset?: number;
   onBack: () => void;
   onSave: (note: Note) => void;
   onDelete?: () => void;
@@ -35,6 +37,7 @@ export function NoteEditPage({
   note,
   category,
   isCreating,
+  keyboardInset,
   onBack,
   onSave,
   onDelete,
@@ -126,6 +129,26 @@ export function NoteEditPage({
       return prev.undo === next.undo && prev.redo === next.redo ? prev : next;
     });
   }, [editor]);
+
+  // 键盘弹出/收起（--kb-inset 变化）后的滚动兜底：个别浏览器把光标滚入可视区时
+  // 只认键盘上沿、不认底栏占位，这里把光标行校正进正文容器可视区（正常情况为 no-op）
+  useEffect(() => {
+    const container = contentRef.current;
+    if (!container || !editor || !keyboardInset || !editor.isFocused) return;
+    const raf = requestAnimationFrame(() => {
+      if (!editor.isFocused) return;
+      try {
+        const coords = editor.view.coordsAtPos(editor.state.selection.from);
+        const visibleBottom = container.getBoundingClientRect().bottom - 12;
+        if (coords.bottom > visibleBottom) {
+          container.scrollTop += coords.bottom - visibleBottom;
+        }
+      } catch {
+        // 取不到选区坐标（文档卸载等）时忽略
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [keyboardInset, editor]);
 
   // 统一的保存逻辑：新建时创建笔记并同步到父组件（后续自动转为更新），编辑时更新笔记
   const performSave = useCallback(async (silent: boolean): Promise<boolean> => {
@@ -292,7 +315,11 @@ export function NoteEditPage({
   useImperativeHandle(ref, () => ({ requestBack: handleBack, saveCurrent }), [handleBack, saveCurrent]);
 
   return (
-    <div className={`note-edit-page${isOptimizing ? ' is-optimizing' : ''}`}>
+    <div
+      className={`note-edit-page${isOptimizing ? ' is-optimizing' : ''}${
+        keyboardInset ? ' is-kb-open' : ''
+      }`}
+    >
       <div className={`note-edit-header${isScrolled ? ' is-scrolled' : ''}`}>
         <div className="note-edit-actions">
           <button

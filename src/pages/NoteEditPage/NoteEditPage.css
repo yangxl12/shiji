@@ -66,7 +66,10 @@
 
 .note-edit-content {
   flex: 1;
-  padding: 72px 16px 80px;
+  /* 键盘弹出页面收缩时允许高度小于内容（flex 子项默认 min-height:auto 会撑开） */
+  min-height: 0;
+  /* 底栏在文档流内不遮挡正文，底部只需少量呼吸留白 */
+  padding: 72px 16px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -91,19 +94,24 @@
   font-weight: 400;
 }
 
-/* 底栏：透明置底，滚动后玻璃化（与顶栏共享 is-scrolled） */
+/* 底栏：透明置底，滚动后玻璃化（与顶栏共享 is-scrolled）。
+   文档流内的尾元素而非 fixed 悬浮：键盘弹出时整页随 --kb-inset 收缩，
+   底栏作为流内元素自然抬到键盘上方；且正文滚动容器的边界止于底栏上沿，
+   浏览器/ProseMirror 的「光标滚入可视区」因此天然避开底栏，不会压住光标 */
 .note-edit-footer {
-  position: fixed;
-  /* 与整页同步抬升：iOS 键盘弹出时布局视口不变，fixed 底栏否则会被键盘遮住 */
-  bottom: var(--kb-inset, 0px);
-  left: 0;
-  right: 0;
+  position: relative;
+  flex-shrink: 0;
   padding: 8px 16px calc(8px + var(--bottom-safe));
   display: flex;
   flex-direction: column;
   z-index: 99;
   border-top: 1px solid transparent;
   transition: border-color var(--dur-base) var(--ease-standard);
+}
+
+/* 键盘弹出时 home 指示条被键盘盖住，收回安全区留白，底栏贴住键盘上沿 */
+.note-edit-page.is-kb-open .note-edit-footer {
+  padding-bottom: 8px;
 }
 
 .note-edit-footer::before {
@@ -203,7 +211,7 @@
 
 @media (min-width: 768px) {
   .note-edit-content {
-    padding: 80px 48px 96px;
+    padding: 80px 48px 40px;
     gap: 20px;
   }
 

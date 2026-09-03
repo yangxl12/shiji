@@ -513,6 +513,7 @@ function App() {
               note={currentNote}
               category={createCategory}
               isCreating={isCreating}
+              keyboardInset={keyboardInset}
               onBack={handleBackToList}
               onSave={handleSaveNote}
               onDelete={handleDeleteNote}
