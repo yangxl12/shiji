@@ -1,6 +1,6 @@
 /**
- * 移动端格式工具条：横向滚动玻璃条，嵌入编辑页底栏上方。
- * 仅在触屏（pointer: coarse）显示，桌面端隐藏（用快捷键/斜杠菜单）。
+ * 格式工具条：横向滚动玻璃条，嵌入编辑页底栏上方。
+ * 移动端与桌面端均显示，方便鼠标用户直接点选。
  */
 
 .editor-toolbar {
@@ -76,9 +76,3 @@
   min-width: 44px;
 }
 
-/* 桌面（精确指针）隐藏：桌面用快捷键与斜杠菜单 */
-@media (hover: hover) and (pointer: fine) {
-  .editor-toolbar {
-    display: none;
-  }
-}

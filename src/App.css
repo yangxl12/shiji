@@ -92,9 +92,7 @@ body {
   transition: transform var(--dur-page) var(--ease-decelerate),
               opacity var(--dur-page) var(--ease-decelerate);
   box-shadow: -4px 0 24px rgba(24, 24, 32, 0.10);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+  overflow: hidden;
 }
 
 /* 编辑页自带环境光（transform 容器即 containing block，光斑锚定本页区域） */
