@@ -23,6 +23,10 @@
   不是相对视口。改动顶栏/浮层定位时要注意这点。
 - 本机沙箱下 `git update-ref` 写 `.git/refs/remotes/**` 会被静默丢弃，push 后
   `origin/main` 可能仍是旧值。直接编辑 `.git/packed-refs` 修正。
+- `.app-page-edit` 带 `transform`，会作为内部 `position: fixed` 元素（`.note-edit-page`）的
+  containing block。如果给它同时写 `overflow-y: auto`，内部内容撑高后就容易形成
+  **外层滚动条嵌套**，滚动外层还会把 fixed 内容一起带上去，露出空白。编辑页只保留
+  `.note-edit-content` 一个滚动容器即可，`.app-page-edit` 应 `overflow: hidden`。
 
 ## 诊断工具
 
