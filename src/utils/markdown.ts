@@ -1,3 +1,5 @@
+import { Marked } from 'marked';
+
 /**
  * Markdown 轻量纯文本提取（笔记卡片预览用）。
  * 仅做展示层的语法剥离，非完整解析；未识别的字符原样保留。
@@ -34,4 +36,36 @@ export function markdownToPlainText(md: string): string {
   text = text.replace(/\n{3,}/g, '\n\n');
 
   return text.trim();
+}
+
+/** 与编辑器 Markdown.configure({ markedOptions }) 一致，保证预览与编辑所见即所得 */
+const mdRenderer = new Marked({ gfm: true, breaks: true });
+
+/** 整体移除的危险标签 */
+const DANGEROUS_TAGS = new Set(['script', 'style', 'iframe', 'object', 'embed', 'form', 'link', 'meta', 'base']);
+/** 可承载 URL 的属性（拦截 javascript: 协议） */
+const URL_ATTRS = new Set(['href', 'src', 'xlink:href', 'poster', 'background']);
+
+/** 轻量 sanitize：marked 默认放行内联 HTML，渲染进 DOM 前剔除脚本/事件属性/危险协议 */
+function sanitize(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.body.querySelectorAll('*').forEach((el) => {
+    if (DANGEROUS_TAGS.has(el.tagName.toLowerCase())) {
+      el.remove();
+      return;
+    }
+    for (const attr of [...el.attributes]) {
+      const name = attr.name.toLowerCase();
+      const isUrlAttr = URL_ATTRS.has(name) && attr.value.trim().toLowerCase().startsWith('javascript:');
+      if (name.startsWith('on') || isUrlAttr) {
+        el.removeAttribute(attr.name);
+      }
+    }
+  });
+  return doc.body.innerHTML;
+}
+
+/** Markdown → 受信 HTML（卡片展开预览用） */
+export function renderMarkdownHtml(md: string): string {
+  return sanitize(mdRenderer.parse(md, { async: false }));
 }

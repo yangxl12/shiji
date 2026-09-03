@@ -2,7 +2,7 @@ import { useRef, useCallback, useEffect, useLayoutEffect, useMemo, useState } fr
 import type { Note, TagColor } from '../../types';
 import { TAG_COLORS } from '../../utils/constants';
 import { formatRelativeTime } from '../../utils/time';
-import { markdownToPlainText } from '../../utils/markdown';
+import { markdownToPlainText, renderMarkdownHtml } from '../../utils/markdown';
 import './NoteCard.css';
 
 interface NoteCardProps {
@@ -221,6 +221,11 @@ export function NoteCard({
   const tagColor = getTagColor(note.tagColor);
   // 卡片预览用纯文本：剥离 Markdown 语法，仅作展示
   const plainContent = useMemo(() => markdownToPlainText(note.content), [note.content]);
+  // 展开态的 Markdown 预览 HTML：懒渲染（仅 showOpen 时解析，收起态保持纯文本，列表滚动零开销）
+  const mdHtml = useMemo(
+    () => (showOpen ? renderMarkdownHtml(note.content) : ''),
+    [showOpen, note.content]
+  );
   const displayTitle = note.title || plainContent.slice(0, 20);
   const isPlaceholderTitle = !note.title && !!note.content;
 
@@ -302,9 +307,19 @@ export function NoteCard({
           onTransitionEnd={handleBodyTransitionEnd}
         >
           {note.content && (note.title || showOpen) && (
-            <div className="note-card-content" onClick={handleContentClick}>
-              {plainContent}
-            </div>
+            showOpen ? (
+              // 展开态：Markdown 预览（HTML 已在 renderMarkdownHtml 内 sanitize）
+              <div
+                className="note-card-content note-card-content-md"
+                onClick={handleContentClick}
+                dangerouslySetInnerHTML={{ __html: mdHtml }}
+              />
+            ) : (
+              // 收起态：纯文本两行截断
+              <div className="note-card-content" onClick={handleContentClick}>
+                {plainContent}
+              </div>
+            )
           )}
           {showOpen && (
             <div className="note-card-collapse-footer">
