@@ -61,6 +61,9 @@
   color: var(--ink-900);
   line-height: 1.4;
   flex: 1;
+  /* 桌面双列网格下：min-width: 0 允许标题被截断为省略号，
+     否则 nowrap 文本的 min-content 会撑大 grid 列轨 → 滚动条 */
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -444,6 +447,9 @@
 @media (min-width: 768px) {
   .note-card-wrapper {
     margin-bottom: 0;
+    /* 网格 item 默认 min-width: auto = min-content，宽内容会把列轨撑爆；
+       配合 .note-list-scroll / .tags-page 的 minmax(0, 1fr) 锁死列宽 */
+    min-width: 0;
   }
 
   /* 统一卡片高度：标题置顶、时间沉底，避免无标题卡片下方留白 */

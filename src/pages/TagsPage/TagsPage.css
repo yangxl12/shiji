@@ -123,7 +123,9 @@
 @media (min-width: 768px) {
   .tags-page {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    /* minmax(0, 1fr) 取代 1fr：固定列宽为容器分配份额，
+       防止卡片内 nowrap 文本的 min-content 撑大列轨导致横向滚动条 */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     align-content: start;
   }
