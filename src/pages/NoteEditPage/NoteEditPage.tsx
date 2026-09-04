@@ -322,6 +322,17 @@ export function NoteEditPage({
     >
       <div className={`note-edit-header${isScrolled ? ' is-scrolled' : ''}`}>
         <div className="note-edit-actions">
+          {/* 桌面端顶栏返回（CSS 控制：≥768px 显示，移动端由底栏按钮与侧滑手势承担） */}
+          <button
+            className="note-view-action-btn note-edit-back-btn"
+            onClick={handleBack}
+            title="返回"
+            aria-label="返回"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+            </svg>
+          </button>
           <button
             className="note-view-action-btn"
             onClick={handleUndo}
@@ -397,7 +408,7 @@ export function NoteEditPage({
         {editor && <EditorToolbar editor={editor} disabled={isOptimizing} />}
         <div className="note-edit-footer-row">
           <button
-            className="note-view-action-btn"
+            className="note-view-action-btn note-edit-back-btn"
             onClick={handleBack}
             title="返回"
           >
