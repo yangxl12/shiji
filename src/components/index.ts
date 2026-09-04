@@ -10,3 +10,4 @@ export { EmptyState } from './EmptyState/EmptyState';
 export { SyncSettings, type SyncStatus } from './SyncSettings/SyncSettings';
 export { AISettings } from './AISettings/AISettings';
 export { ThemeToggle } from './ThemeToggle/ThemeToggle';
+export { GlobalSearch } from './GlobalSearch/GlobalSearch';

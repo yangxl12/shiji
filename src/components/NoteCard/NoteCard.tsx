@@ -103,10 +103,10 @@ export function NoteCard({
       !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   );
 
-  /** 逻辑展开态（aria / 按钮语义）；批量模式下强制视为收起 */
-  const isOpen = expanded && !isBatchMode;
+  /** 逻辑展开态（aria / 按钮语义）；批量模式下同样保持，长按进入多选不会收起已展开的笔记 */
+  const isOpen = expanded;
   /** 视觉展开态：解除两行截断并渲染「收起」按钮；收起动画期间保持 true，避免内容先跳变为截断态 */
-  const showOpen = (expanded || collapsing) && !isBatchMode;
+  const showOpen = expanded || collapsing;
 
   // 按钮交互不应触发卡片长按（多选）与点击（进入编辑）
   const stopEventPropagation = useCallback((e: React.SyntheticEvent) => {
@@ -114,7 +114,6 @@ export function NoteCard({
   }, []);
 
   const toggleExpand = useCallback(() => {
-    if (isBatchMode) return;
     const body = bodyRef.current;
 
     // 减动效偏好：跳过高度动画，直接切换
@@ -141,7 +140,7 @@ export function NoteCard({
       setCollapsing(false);
       setExpanded(true);
     }
-  }, [expanded, isBatchMode]);
+  }, [expanded]);
 
   const handleToggleExpand = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -175,22 +174,15 @@ export function NoteCard({
     onClick();
   }, [isBatchMode, onClick]);
 
-  // DOM 提交后再测目标高度并启动过渡（强制 reflow 让起始高度先生效，否则会被合并成一次跳变）；
-  // 批量模式下清掉动画残留的内联高度
+  // DOM 提交后再测目标高度并启动过渡（强制 reflow 让起始高度先生效，否则会被合并成一次跳变）
   useLayoutEffect(() => {
     const body = bodyRef.current;
-    if (!body) return;
-    if (isBatchMode) {
-      animDirRef.current = null;
-      body.style.removeProperty('height');
-      return;
-    }
-    if (!animDirRef.current) return;
+    if (!body || !animDirRef.current) return;
     void body.offsetHeight;
     const target =
       animDirRef.current === 'expand' ? body.scrollHeight : collapsedHeightRef.current;
     body.style.height = `${target}px`;
-  }, [expanded, collapsing, isBatchMode]);
+  }, [expanded, collapsing]);
 
   // 过渡结束：展开回 auto（自适应后续内容/主题变化），收起移除内联高度恢复截断态
   const handleBodyTransitionEnd = useCallback(
@@ -207,16 +199,6 @@ export function NoteCard({
     },
     [expanded]
   );
-
-  // 进入批量模式时重置展开态（渲染期 prop 适配写法，避免 effect 级联渲染）
-  const [wasBatchMode, setWasBatchMode] = useState(isBatchMode);
-  if (wasBatchMode !== isBatchMode) {
-    setWasBatchMode(isBatchMode);
-    if (isBatchMode) {
-      setExpanded(false);
-      setCollapsing(false);
-    }
-  }
 
   const tagColor = getTagColor(note.tagColor);
   // 卡片预览用纯文本：剥离 Markdown 语法，仅作展示
@@ -267,28 +249,27 @@ export function NoteCard({
           </div>
         )}
         <div className="note-card-header">
-          {!isBatchMode && (
-            <button
-              type="button"
-              className="note-card-toggle"
-              aria-expanded={isOpen}
-              aria-label={isOpen ? '收起笔记' : '展开笔记'}
-              onClick={handleToggleExpand}
-              onMouseDown={stopEventPropagation}
-              onTouchStart={stopEventPropagation}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M6 9.5l6 6 6-6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          )}
+          {/* 展开/收起按钮：批量模式下同样保留，长按进入多选后仍可继续展开查看 */}
+          <button
+            type="button"
+            className="note-card-toggle"
+            aria-expanded={isOpen}
+            aria-label={isOpen ? '收起笔记' : '展开笔记'}
+            onClick={handleToggleExpand}
+            onMouseDown={stopEventPropagation}
+            onTouchStart={stopEventPropagation}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M6 9.5l6 6 6-6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
           <div
             className={`note-card-title ${
               isPlaceholderTitle ? 'note-card-placeholder-title' : ''

@@ -1,0 +1,284 @@
+/* ===== 全局搜索：右上角触发按钮（主题按钮左侧） ===== */
+
+.global-search-btn {
+  position: fixed;
+  top: 0;
+  /* 与 theme-toggle-btn / sync-status-btn 同规格，固定在其左侧一档 */
+  right: 112px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 100;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.global-search-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--ink-400);
+  transition: fill var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+}
+
+.global-search-btn:active svg {
+  transform: scale(0.88);
+}
+
+/* hover：仅鼠标设备 */
+@media (hover: hover) and (pointer: fine) {
+  .global-search-btn:hover svg {
+    fill: var(--ink-900);
+    transform: scale(1.08);
+  }
+}
+
+/* ===== 搜索弹层：顶部下探的玻璃面板（输入区常驻顶部，不被软键盘遮挡） ===== */
+
+.global-search-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* bottom 由内联样式按软键盘高度下发 */
+  background: rgba(20, 20, 24, 0.32);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 8px;
+  z-index: 1000;
+  animation: global-search-fade-in var(--dur-base) var(--ease-standard);
+}
+
+.global-search-sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--glass-overlay-bg);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-modal);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    var(--shadow-float);
+  animation: global-search-sheet-in var(--dur-base) var(--ease-decelerate);
+}
+
+/* 输入区：搜索图标 + 输入框 + 清空 */
+.global-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--hairline);
+  flex-shrink: 0;
+}
+
+.global-search-field-icon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.global-search-field-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--ink-400);
+}
+
+.global-search-input {
+  flex: 1;
+  /* 桌面双列/窄屏下允许收缩，避免撑破面板 */
+  min-width: 0;
+  height: 40px;
+  border: none;
+  background: transparent;
+  /* 16px 起：防止 iOS 聚焦时页面自动放大 */
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--ink-900);
+  outline: none;
+}
+
+/* 隐藏 type=search 的原生清除按钮，使用自绘的 .global-search-clear */
+.global-search-input::-webkit-search-cancel-button,
+.global-search-input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.global-search-input::placeholder {
+  color: var(--ink-300);
+}
+
+.global-search-clear {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-2);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.global-search-clear svg {
+  width: 12px;
+  height: 12px;
+  fill: var(--ink-500);
+}
+
+.global-search-clear:active {
+  background: var(--ink-300);
+}
+
+/* 结果区：唯一滚动容器 */
+.global-search-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px;
+}
+
+.global-search-hint {
+  font: var(--text-body-sm);
+  color: var(--ink-400);
+  text-align: center;
+  padding: 28px 16px;
+}
+
+.global-search-count {
+  font: var(--text-micro);
+  color: var(--ink-400);
+  padding: 4px 6px 6px;
+}
+
+.global-search-list {
+  list-style: none;
+}
+
+.global-search-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  border: none;
+  border-radius: var(--radius-btn);
+  background: transparent;
+  padding: 10px 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.global-search-item:active {
+  background: var(--surface-2);
+}
+
+.global-search-item-title {
+  font: var(--text-body-sm);
+  font-weight: 600;
+  color: var(--ink-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.global-search-item-snippet {
+  font: var(--text-caption);
+  color: var(--ink-500);
+  line-height: 1.5;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: break-word;
+}
+
+.global-search-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font: var(--text-micro);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-300);
+  margin-top: 6px;
+}
+
+.global-search-item-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 命中高亮 */
+.global-search-hit {
+  background: color-mix(in srgb, var(--brand-hue) 20%, transparent);
+  color: var(--brand-hue);
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+@keyframes global-search-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes global-search-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ===== 桌面端适配（≥768px）：按钮贴内容列，弹层改为居中对话框 ===== */
+
+@media (min-width: 768px) {
+  .global-search-btn {
+    right: max(112px, calc(50vw - var(--app-max-width) / 2 + 112px));
+  }
+
+  .global-search-overlay {
+    padding: 10vh 16px 16px;
+  }
+
+  .global-search-sheet {
+    max-width: 560px;
+    max-height: 100%;
+  }
+}
+
+/* hover：仅鼠标设备 */
+@media (hover: hover) and (pointer: fine) {
+  .global-search-item:hover {
+    background: var(--surface-2);
+  }
+
+  .global-search-clear:hover {
+    background: var(--ink-300);
+  }
+}

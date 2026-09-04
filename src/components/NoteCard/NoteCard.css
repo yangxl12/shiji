@@ -412,6 +412,11 @@
   padding-left: 40px;
 }
 
+/* 多选模式下卡片可展开：复选框改为对齐标题行（默认垂直居中，展开后会随卡片变高而下移） */
+.note-card-batch.note-card-open .note-card-checkbox {
+  top: 28px;
+}
+
 .note-card-placeholder-title {
   font-style: italic;
   color: var(--ink-500);

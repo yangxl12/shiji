@@ -57,6 +57,9 @@
 
 .tags-header .tag-chip-nav {
   flex: 1;
+  /* 让出右上角固定按钮区（搜索 / 主题：距列右缘 112px + 56px 宽），
+     避免窄屏下 chip 被按钮压住；chip 区本身可横向滚动，空间不足时自动退化 */
+  margin-right: 120px;
 }
 
 /* Header actions container */

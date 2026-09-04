@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import type { CSSProperties } from 'react';
 import type { Note, Category, TabType, ToastMessage } from './types';
 import { initDB, setDataChangeListener, getNotesByCategory, getAllTaggedNotes, getAllNotes } from './db';
-import { TabBar, ToastContainer, FAB, SyncSettings, ThemeToggle, type SyncStatus } from './components';
+import { TabBar, ToastContainer, FAB, SyncSettings, ThemeToggle, GlobalSearch, type SyncStatus } from './components';
 import { NoteListPage, TagsPage } from './pages';
 import type { NoteEditPageHandle } from './pages/NoteEditPage/NoteEditPage';
 import { useSwipeBack } from './hooks/useSwipeBack';
@@ -471,6 +471,15 @@ function App() {
       {/* FAB - Fixed at bottom right, outside of scrollable page */}
       {!isBatchMode && !showEditPage && activeTab !== 'tags' && (
         <FAB onClick={handleCreateNote} />
+      )}
+
+      {/* 搜索入口 - 右上角（主题按钮左侧），批量模式/编辑页隐藏 */}
+      {!isBatchMode && !showEditPage && (
+        <GlobalSearch
+          notes={allNotes}
+          keyboardInset={keyboardInset}
+          onViewNote={handleViewNote}
+        />
       )}
 
       {/* 主题切换按钮 - 右上角（同步按钮左侧），批量模式/编辑页隐藏 */}
