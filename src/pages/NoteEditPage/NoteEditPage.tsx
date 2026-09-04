@@ -246,7 +246,7 @@ export function NoteEditPage({
     if (!note) return;
     try {
       await softDeleteNote(note.id);
-      onToast('已删除');
+      onToast('已移入回收站');
       if (onDelete) onDelete();
     } catch (error) {
       onToast(error instanceof Error ? error.message : '删除失败');
@@ -435,7 +435,7 @@ export function NoteEditPage({
       <Modal
         isOpen={showDeleteModal}
         title="确定删除这条笔记？"
-        content="删除后无法恢复"
+        content="删除后可在回收站恢复，保留 15 天"
         cancelText="取消"
         confirmText="删除"
         isDanger={true}

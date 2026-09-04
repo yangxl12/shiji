@@ -1,6 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Note, NoteInput, Category, TagColor } from '../types';
-import { DB_NAME, DB_VERSION, STORE_NAME, MAX_TITLE_LENGTH, MAX_CONTENT_LENGTH } from '../utils/constants';
+import { DB_NAME, DB_VERSION, STORE_NAME, MAX_TITLE_LENGTH, MAX_CONTENT_LENGTH, TRASH_RETENTION_DAYS } from '../utils/constants';
 
 interface ShiJiDB extends DBSchema {
   notes: {
@@ -129,6 +129,7 @@ export async function createNote(input: NoteInput): Promise<{ note: Note; warnin
     createdAt: now,
     updatedAt: now,
     isDeleted: false,
+    deletedAt: null,
   };
 
   try {
@@ -202,6 +203,7 @@ export async function softDeleteNote(id: string): Promise<void> {
   }
 
   note.isDeleted = true;
+  note.deletedAt = Date.now();
   note.updatedAt = Date.now();
   await db.put(STORE_NAME, note);
   notifyDataChange();
@@ -217,6 +219,7 @@ export async function batchSoftDeleteNote(ids: string[]): Promise<void> {
     const note = await store.get(id);
     if (note) {
       note.isDeleted = true;
+      note.deletedAt = now;
       note.updatedAt = now;
       await store.put(note);
     }
@@ -278,4 +281,99 @@ export async function updateNoteTagColor(id: string, tagColor: TagColor | null):
   await db.put(STORE_NAME, note);
   notifyDataChange();
   return note;
+}
+
+// ===== 回收站 =====
+
+/** 回收站笔记的删除时间：兼容旧数据（未记录 deletedAt 时回退 updatedAt） */
+function deletedAtOf(note: Note): number {
+  return note.deletedAt ?? note.updatedAt;
+}
+
+/** 读取回收站全部笔记（isDeleted），按删除时间倒序 */
+export async function getDeletedNotes(): Promise<Note[]> {
+  const db = getDB();
+  const allNotes = await db.getAll(STORE_NAME);
+  return allNotes
+    .filter((note) => note.isDeleted)
+    .sort((a, b) => deletedAtOf(b) - deletedAtOf(a));
+}
+
+/** 从回收站恢复单条笔记 */
+export async function restoreNote(id: string): Promise<void> {
+  const db = getDB();
+  const note = await db.get(STORE_NAME, id);
+  if (!note) {
+    throw new Error('笔记不存在');
+  }
+
+  note.isDeleted = false;
+  note.deletedAt = null;
+  note.updatedAt = Date.now();
+  await db.put(STORE_NAME, note);
+  notifyDataChange();
+}
+
+/** 从回收站批量恢复 */
+export async function batchRestoreNote(ids: string[]): Promise<void> {
+  const db = getDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+
+  const now = Date.now();
+  for (const id of ids) {
+    const note = await store.get(id);
+    if (note) {
+      note.isDeleted = false;
+      note.deletedAt = null;
+      note.updatedAt = now;
+      await store.put(note);
+    }
+  }
+
+  await tx.done;
+  notifyDataChange();
+}
+
+/** 彻底删除单条笔记（物理删除，不可恢复） */
+export async function hardDeleteNote(id: string): Promise<void> {
+  const db = getDB();
+  await db.delete(STORE_NAME, id);
+  notifyDataChange();
+}
+
+/** 批量彻底删除（物理删除，不可恢复） */
+export async function batchHardDeleteNote(ids: string[]): Promise<void> {
+  const db = getDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+  for (const id of ids) {
+    await store.delete(id);
+  }
+  await tx.done;
+  notifyDataChange();
+}
+
+/**
+ * 清理回收站中超过保留期的笔记（物理删除）。
+ * 返回被彻底删除的条数；调用时机：应用启动后、打开回收站时。
+ */
+export async function purgeExpiredNotes(): Promise<number> {
+  const db = getDB();
+  const allNotes = await db.getAll(STORE_NAME);
+  const threshold = Date.now() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  const expiredIds = allNotes
+    .filter((note) => note.isDeleted && deletedAtOf(note) < threshold)
+    .map((note) => note.id);
+
+  if (expiredIds.length === 0) return 0;
+
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+  for (const id of expiredIds) {
+    await store.delete(id);
+  }
+  await tx.done;
+  notifyDataChange();
+  return expiredIds.length;
 }

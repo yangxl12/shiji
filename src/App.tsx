@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import type { CSSProperties } from 'react';
 import type { Note, Category, TabType, ToastMessage } from './types';
-import { initDB, setDataChangeListener, getNotesByCategory, getAllTaggedNotes, getAllNotes } from './db';
+import { initDB, setDataChangeListener, getNotesByCategory, getAllTaggedNotes, getAllNotes, purgeExpiredNotes } from './db';
 import { TabBar, ToastContainer, FAB, SyncSettings, ThemeToggle, GlobalSearch, type SyncStatus } from './components';
-import { NoteListPage, TagsPage } from './pages';
+import { NoteListPage, TagsPage, SettingsPage } from './pages';
 import type { NoteEditPageHandle } from './pages/NoteEditPage/NoteEditPage';
 import { useSwipeBack } from './hooks/useSwipeBack';
 import { useTheme } from './hooks/useTheme';
@@ -80,6 +80,9 @@ function App() {
       // Always load all notes for export
       const all = await getAllNotes();
       setAllNotes(all);
+
+      // 设置页自管理回收站数据，不加载笔记列表
+      if (activeTab === 'settings') return;
 
       if (activeTab === 'tags') {
         const allTagged = await getAllTaggedNotes();
@@ -210,6 +213,9 @@ function App() {
             syncingRef.current = false;
           }
         }
+        // 清理回收站中超过保留期的笔记（启动即检查一次；若已配置同步，
+        // 物理删除会经 notifyDataChange → 防抖推送同步到云端）
+        await purgeExpiredNotes();
         await loadNotes();
         setIsLoading(false);
       } catch (error) {
@@ -340,7 +346,7 @@ function App() {
 
   const handleCreateNote = useCallback(() => {
     setCurrentNote(null);
-    if (activeTab !== 'tags') {
+    if (activeTab !== 'tags' && activeTab !== 'settings') {
       setCreateCategory(activeTab);
     }
     setCurrentPage('create');
@@ -430,7 +436,14 @@ function App() {
         className={`app-page app-page-list ${showEditPage ? 'page-list-behind' : ''}`}
         ref={listPageRef}
       >
-        {activeTab !== 'tags' ? (
+        {activeTab === 'settings' ? (
+          <SettingsPage
+            themeMode={themeMode}
+            onThemeChange={setThemeMode}
+            onOpenSyncSettings={() => setShowSyncSettings(true)}
+            onToast={showToast}
+          />
+        ) : activeTab !== 'tags' ? (
           <NoteListPage
             category={activeTab}
             notes={notes}
@@ -469,12 +482,12 @@ function App() {
       )}
 
       {/* FAB - Fixed at bottom right, outside of scrollable page */}
-      {!isBatchMode && !showEditPage && activeTab !== 'tags' && (
+      {!isBatchMode && !showEditPage && activeTab !== 'tags' && activeTab !== 'settings' && (
         <FAB onClick={handleCreateNote} />
       )}
 
-      {/* 搜索入口 - 右上角（主题按钮左侧），批量模式/编辑页隐藏 */}
-      {!isBatchMode && !showEditPage && (
+      {/* 搜索入口 - 右上角（主题按钮左侧），批量模式/编辑页/设置页隐藏 */}
+      {!isBatchMode && !showEditPage && activeTab !== 'settings' && (
         <GlobalSearch
           notes={allNotes}
           keyboardInset={keyboardInset}
@@ -482,13 +495,13 @@ function App() {
         />
       )}
 
-      {/* 主题切换按钮 - 右上角（同步按钮左侧），批量模式/编辑页隐藏 */}
-      {!isBatchMode && !showEditPage && (
+      {/* 主题切换按钮 - 右上角（同步按钮左侧），批量模式/编辑页/设置页隐藏 */}
+      {!isBatchMode && !showEditPage && activeTab !== 'settings' && (
         <ThemeToggle mode={themeMode} onChange={setThemeMode} onToast={showToast} />
       )}
 
       {/* 同步状态按钮 - 笔记列表页右上角（标签页右上角已有导出按钮，不重复放置） */}
-      {!isBatchMode && !showEditPage && activeTab !== 'tags' && (
+      {!isBatchMode && !showEditPage && activeTab !== 'tags' && activeTab !== 'settings' && (
         <button
           className={`sync-status-btn sync-status-btn-${syncStatus}`}
           onClick={() => setShowSyncSettings(true)}

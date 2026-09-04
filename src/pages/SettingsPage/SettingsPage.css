@@ -1,0 +1,296 @@
+/* ===== 设置页：主视图 ↔ 回收站视图（同容器双面板滑切） ===== */
+
+.settings-container {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  transition: transform var(--dur-page) var(--ease-decelerate),
+    opacity var(--dur-page) var(--ease-decelerate);
+  will-change: transform;
+}
+
+.settings-panel-main {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.settings-panel-trash {
+  transform: translateX(100%);
+  box-shadow: -4px 0 24px rgba(24, 24, 32, 0.1);
+}
+
+/* 进入回收站：主视图后退景深，回收站滑入 */
+.settings-container.is-trash .settings-panel-main {
+  transform: translateX(-30%);
+  opacity: 0.5;
+}
+
+.settings-container.is-trash .settings-panel-trash {
+  transform: translateX(0);
+}
+
+/* ===== 顶栏 ===== */
+
+.settings-header {
+  height: 56px;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.settings-title {
+  font: var(--text-title);
+  color: var(--ink-900);
+}
+
+.settings-back-btn {
+  position: absolute;
+  left: 8px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: var(--radius-btn);
+  background: transparent;
+  color: var(--ink-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.settings-back-btn:active {
+  background: var(--surface-2);
+}
+
+.settings-back-btn svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.settings-clear-btn {
+  position: absolute;
+  right: 16px;
+  border: none;
+  background: transparent;
+  color: var(--danger);
+  font: var(--text-caption);
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: 8px 4px;
+}
+
+/* ===== 滚动区 ===== */
+
+.settings-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 16px calc(var(--nav-height) + var(--safe-area-bottom) + 24px);
+}
+
+/* ===== 设置项卡片 ===== */
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: none;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+  text-align: left;
+  transition: transform var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-base) var(--ease-standard);
+}
+
+.settings-item:active {
+  transform: scale(0.98);
+}
+
+.settings-item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-btn);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  color: var(--ink-700);
+  flex-shrink: 0;
+}
+
+.settings-item-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.settings-item-icon-trash {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.settings-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-item-title {
+  font: var(--text-body-sm);
+  font-weight: 500;
+  color: var(--ink-900);
+}
+
+.settings-item-desc {
+  font: var(--text-micro);
+  color: var(--ink-500);
+}
+
+.settings-item-value {
+  font: var(--text-micro);
+  color: var(--ink-500);
+  flex-shrink: 0;
+}
+
+.settings-item-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-chip);
+  background: var(--danger);
+  color: #fff;
+  font: var(--text-micro);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* 行尾箭头（ChevronIcon 作为 settings-item 直接子 svg） */
+.settings-item > svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--ink-400);
+  flex-shrink: 0;
+}
+
+/* ===== 回收站列表 ===== */
+
+.trash-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trash-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 14px 16px;
+}
+
+.trash-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trash-item-title {
+  font: var(--text-body-sm);
+  font-weight: 500;
+  color: var(--ink-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trash-item-meta {
+  font: var(--text-micro);
+  color: var(--ink-500);
+}
+
+.trash-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.trash-action-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-btn);
+  background: var(--surface-2);
+  color: var(--ink-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+
+.trash-action-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.trash-action-btn:active {
+  transform: scale(0.92);
+}
+
+.trash-action-btn-danger {
+  color: var(--danger);
+}
+
+/* ===== 桌面端悬停反馈 ===== */
+
+@media (hover: hover) and (pointer: fine) {
+  .settings-item:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .settings-back-btn:hover {
+    background: var(--surface-2);
+  }
+
+  .trash-action-btn:hover {
+    filter: brightness(1.04);
+  }
+}

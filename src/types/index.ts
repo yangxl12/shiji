@@ -11,6 +11,8 @@ export interface Note {
   createdAt: number;
   updatedAt: number;
   isDeleted: boolean;
+  /** 软删除时间戳（移入回收站的时刻）；未删除时为 null。用于回收站 15 天到期清理 */
+  deletedAt: number | null;
 }
 
 export interface NoteInput {
@@ -34,7 +36,7 @@ export interface AIModelConfig {
 
 export type ViewMode = 'list' | 'detail' | 'create' | 'edit';
 
-export type TabType = Category | 'tags';
+export type TabType = Category | 'tags' | 'settings';
 
 export interface ToastMessage {
   id: string;

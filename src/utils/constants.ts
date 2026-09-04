@@ -10,6 +10,9 @@ export const MAX_CONTENT_LENGTH = 50000;
 /** 笔记变更后自动推送云端前的防抖时间（毫秒） */
 export const SYNC_PUSH_DEBOUNCE = 3000;
 
+/** 回收站保留天数：超过该时长仍未恢复的笔记将被自动彻底删除 */
+export const TRASH_RETENTION_DAYS = 15;
+
 export const CATEGORIES: { key: Category; label: string; emptyText: string }[] = [
   { key: 'impromptu', label: '随想', emptyText: '还没有随想，点击右下角记录此刻' },
   { key: 'study', label: '学习', emptyText: '还没有学习笔记，点击右下角开始记录' },

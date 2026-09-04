@@ -109,6 +109,7 @@ function sanitizeNote(raw: unknown): Note | null {
     createdAt: typeof n.createdAt === 'number' ? n.createdAt : Date.now(),
     updatedAt: typeof n.updatedAt === 'number' ? n.updatedAt : Date.now(),
     isDeleted: n.isDeleted === true,
+    deletedAt: typeof n.deletedAt === 'number' ? n.deletedAt : null,
   };
 }
 
