@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import type { CSSProperties } from 'react';
 import type { Note, Category, TabType, ToastMessage } from './types';
-import { initDB, setDataChangeListener, getNotesByCategory, getAllTaggedNotes, getAllNotes, purgeExpiredNotes } from './db';
+import { initDB, setDataChangeListener, getAllNotes, purgeExpiredNotes } from './db';
 import { TabBar, ToastContainer, FAB, SyncSettings, ThemeToggle, GlobalSearch, type SyncStatus } from './components';
 import { NoteListPage, TagsPage, SettingsPage } from './pages';
 import type { NoteEditPageHandle } from './pages/NoteEditPage/NoteEditPage';
@@ -21,6 +21,8 @@ const NoteEditPage = lazy(importNoteEditPage);
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  // 初始化完成（initDB + 启动同步 + 回收站清理）后才开始拉列表数据
+  const [initDone, setInitDone] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('impromptu');
   const [showEditPage, setShowEditPage] = useState(false);
@@ -75,26 +77,32 @@ function App() {
     setToasts((prev) => [...prev, { id, message }]);
   }, []);
 
+  // loadNotes 的引用必须稳定：它是列表页/标签页的 prop，变化会让 memo 全线失效。
+  // 因此 activeTab 走 ref 读取，回调自身不随 tab 切换重建。
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
   const loadNotes = useCallback(async () => {
     try {
-      // Always load all notes for export
+      // 一次全表读取 + 内存分组：切 tab / 关闭编辑页不再重复扫库两次
       const all = await getAllNotes();
       setAllNotes(all);
 
+      const tab = activeTabRef.current;
       // 设置页自管理回收站数据，不加载笔记列表
-      if (activeTab === 'settings') return;
+      if (tab === 'settings') return;
 
-      if (activeTab === 'tags') {
-        const allTagged = await getAllTaggedNotes();
-        setTaggedNotes(allTagged);
+      if (tab === 'tags') {
+        setTaggedNotes(all.filter((note) => note.tagColor !== null));
       } else {
-        const categoryNotes = await getNotesByCategory(activeTab);
-        setNotes(categoryNotes);
+        setNotes(all.filter((note) => note.category === tab));
       }
     } catch (error) {
       showToast(error instanceof Error ? error.message : '加载失败');
     }
-  }, [activeTab, showToast]);
+  }, [showToast]);
 
   // ===== 同步逻辑 =====
 
@@ -216,8 +224,7 @@ function App() {
         // 清理回收站中超过保留期的笔记（启动即检查一次；若已配置同步，
         // 物理删除会经 notifyDataChange → 防抖推送同步到云端）
         await purgeExpiredNotes();
-        await loadNotes();
-        setIsLoading(false);
+        setInitDone(true);
       } catch (error) {
         setDbError(error instanceof Error ? error.message : '初始化失败');
         setIsLoading(false);
@@ -225,6 +232,19 @@ function App() {
     };
     init();
   }, []);
+
+  // 数据加载：初始化完成后、切 tab 时、编辑页关闭时各跑一次。
+  // 合并原先两个 effect（依赖互相牵连会导致同一次切换重复扫库两次）。
+  useEffect(() => {
+    if (!initDone || dbError || showEditPage) return;
+    let cancelled = false;
+    void loadNotes().then(() => {
+      if (!cancelled) setIsLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [initDone, dbError, activeTab, showEditPage, loadNotes]);
 
   // 首屏数据就绪后，趁空闲预拉取编辑页 chunk，避免首次打开笔记时等待（约 170KB gzip）
   useEffect(() => {
@@ -241,19 +261,6 @@ function App() {
     const timerId = window.setTimeout(preload, 1500);
     return () => window.clearTimeout(timerId);
   }, [isLoading, dbError]);
-
-  useEffect(() => {
-    if (!isLoading && !dbError) {
-      loadNotes();
-    }
-  }, [activeTab, loadNotes]);
-
-  // Refresh notes when returning to list
-  useEffect(() => {
-    if (!isLoading && !dbError && !showEditPage) {
-      loadNotes();
-    }
-  }, [showEditPage, isLoading, dbError, loadNotes]);
 
   const handleCloseToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));

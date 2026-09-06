@@ -78,6 +78,7 @@ export function useSwipeBack(
         behind.style.opacity = '';
         behind.style.transform = '';
         behind.style.pointerEvents = '';
+        behind.style.visibility = '';
       }
     };
 
@@ -188,7 +189,12 @@ export function useSwipeBack(
         g.curX = g.baseLeft;
         page.style.transition = 'none';
         const behind = behindRef.current;
-        if (behind) behind.style.transition = 'none';
+        if (behind) {
+          behind.style.transition = 'none';
+          // 列表页在编辑页完全滑入后被 visibility:hidden 停绘，
+          // 这里提前恢复，否则拖拽返回全程看不到后景深列表
+          behind.style.visibility = 'visible';
+        }
       }
 
       // 接管后阻止默认行为：页面滚动、浏览器自带的边缘返回手势

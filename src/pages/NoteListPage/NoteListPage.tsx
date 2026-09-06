@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { memo, useState, useCallback, useRef } from 'react';
 import type { Note, Category } from '../../types';
 import { CATEGORIES } from '../../utils/constants';
 import { batchSoftDeleteNote } from '../../db';
@@ -26,7 +26,7 @@ interface NoteListPageProps {
   onToast: (message: string) => void;
 }
 
-export function NoteListPage({
+function NoteListPageInner({
   category,
   notes,
   isBatchMode,
@@ -105,6 +105,8 @@ export function NoteListPage({
         {notes.length === 0 ? (
           <EmptyState text={categoryInfo.emptyText} />
         ) : (
+          // 回调直接透传父级稳定引用（不在 render 里造新函数），
+          // 配合 NoteCard 的 memo：勾选/滚动/顶栏状态变化只重渲染受影响的卡片
           notes.map((note, index) => (
             <NoteCard
               key={note.id}
@@ -112,9 +114,9 @@ export function NoteListPage({
               isBatchMode={isBatchMode}
               isSelected={selectedIds.has(note.id)}
               index={index}
-              onClick={() => onViewNote(note)}
-              onToggleSelect={() => onToggleSelect(note.id)}
-              onLongPress={() => handleLongPress(note.id)}
+              onOpen={onViewNote}
+              onToggleSelect={onToggleSelect}
+              onLongPress={handleLongPress}
             />
           ))
         )}
@@ -134,3 +136,6 @@ export function NoteListPage({
     </div>
   );
 }
+
+/** memo：App 级状态（toast / 同步状态 / 键盘高度）变化时不再连带重渲染整列表 */
+export const NoteListPage = memo(NoteListPageInner);

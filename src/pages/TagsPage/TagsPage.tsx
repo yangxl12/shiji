@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { memo, useState, useMemo, useCallback, useRef } from 'react';
 import type { Note, TagColor } from '../../types';
 import {
   NoteCard,
@@ -33,7 +33,7 @@ const ExportIcon = () => (
   </svg>
 );
 
-export function TagsPage({
+function TagsPageInner({
   notes,
   allNotes,
   isBatchMode,
@@ -172,6 +172,7 @@ export function TagsPage({
         {filteredNotes.length === 0 ? (
           <EmptyState text={getEmptyText()} />
         ) : (
+          // 回调直接透传稳定引用，配合 NoteCard 的 memo 避免整列重渲染
           filteredNotes.map((note, index) => (
             <NoteCard
               key={note.id}
@@ -179,9 +180,9 @@ export function TagsPage({
               isBatchMode={isBatchMode}
               isSelected={selectedIds.has(note.id)}
               index={index}
-              onClick={() => onViewNote(note)}
-              onToggleSelect={() => handleToggleSelect(note.id)}
-              onLongPress={() => handleLongPress(note.id)}
+              onOpen={onViewNote}
+              onToggleSelect={handleToggleSelect}
+              onLongPress={handleLongPress}
             />
           ))
         )}
@@ -201,3 +202,6 @@ export function TagsPage({
     </>
   );
 }
+
+/** memo：App 级状态变化时不再连带重渲染整列表 */
+export const TagsPage = memo(TagsPageInner);

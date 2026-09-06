@@ -160,6 +160,14 @@
   padding: 28px 16px;
 }
 
+/* 结果截断提示（列表底部） */
+.global-search-more {
+  font: var(--text-micro);
+  color: var(--ink-400);
+  text-align: center;
+  padding: 10px 8px 4px;
+}
+
 .global-search-count {
   font: var(--text-micro);
   color: var(--ink-400);

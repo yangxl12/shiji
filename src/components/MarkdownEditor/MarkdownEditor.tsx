@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { Ref } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor, EditorEvents } from '@tiptap/core';
@@ -61,7 +61,7 @@ function copySelectionAsMarkdown(view: EditorView, event: ClipboardEvent, editor
  * 所见即所得 Markdown 编辑器（Tiptap v3 + 官方 markdown 扩展）。
  * 外界只见 Markdown 字符串；breaks:true 保证旧纯文本笔记的单换行渲染不变。
  */
-export function MarkdownEditor({
+function MarkdownEditorInner({
   value,
   onChange,
   placeholder,
@@ -150,20 +150,30 @@ export function MarkdownEditor({
     };
   }, [editor, onReady]);
 
-  // 内容变化 → 序列化回传；任意事务 → 通知父组件刷新 UI 状态
+  // 内容变化 → 序列化回传
   useEffect(() => {
     if (!editor) return;
+    let raf = 0;
     const handleTransaction = ({ transaction }: EditorEvents['transaction']) => {
-      onTransactionRef.current?.();
-      if (transaction.docChanged) {
+      // 纯选区变化（移动光标）不处理：editor.can().undo() 是一次空跑事务，
+      // 每次按键都跑会拖慢输入响应，而可用态只随文档内容变化。
+      if (!transaction.docChanged) return;
+      // 同一帧内的多次事务（输入法组字、批量命令）合并为一次序列化：
+      // getMarkdown() 是整篇文档的序列化，长笔记下逐次调用会明显掉帧。
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        if (editor.isDestroyed) return;
         const markdown = editor.getMarkdown();
         lastEmittedRef.current = markdown;
         onChangeRef.current(markdown);
-      }
+        onTransactionRef.current?.();
+      });
     };
     editor.on('transaction', handleTransaction);
     return () => {
       editor.off('transaction', handleTransaction);
+      if (raf) cancelAnimationFrame(raf);
     };
   }, [editor]);
 
@@ -228,3 +238,6 @@ export function MarkdownEditor({
     </div>
   );
 }
+
+/** memo：父组件（编辑页）的滚动/键盘等状态变化不再连带重建编辑器子树 */
+export const MarkdownEditor = memo(MarkdownEditorInner);

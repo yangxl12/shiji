@@ -1,8 +1,8 @@
-import { useRef, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { memo, useRef, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type { Note, TagColor } from '../../types';
 import { TAG_COLORS } from '../../utils/constants';
 import { formatRelativeTime } from '../../utils/time';
-import { markdownToPlainText, renderMarkdownHtml } from '../../utils/markdown';
+import { markdownToPlainText, renderMarkdownHtml, prewarmMarkdownHtml } from '../../utils/markdown';
 import './NoteCard.css';
 
 interface NoteCardProps {
@@ -10,10 +10,11 @@ interface NoteCardProps {
   isBatchMode: boolean;
   isSelected: boolean;
   /** 首屏入场编排索引（前 8 张 28ms 递进，由列表页传入；纯展示用） */
-  index?: number;
-  onClick: () => void;
-  onToggleSelect: () => void;
-  onLongPress: () => void;
+  index: number;
+  /** 打开笔记详情（引用稳定，配合 memo 避免无关重渲染） */
+  onOpen: (note: Note) => void;
+  onToggleSelect: (id: string) => void;
+  onLongPress: (id: string) => void;
 }
 
 const getTagColor = (tagColor: TagColor | null): string | null => {
@@ -22,21 +23,32 @@ const getTagColor = (tagColor: TagColor | null): string | null => {
   return color?.value ?? null;
 };
 
-export function NoteCard({
+/** 展开 / 收起时长：比通用过渡更短，减少高度动画期间的逐帧重排帧数 */
+const EXPAND_DURATION = 240;
+const COLLAPSE_DURATION = 190;
+/** 展开先快后缓（内容到达），收起先缓后快（内容让路） */
+const EXPAND_EASING = 'cubic-bezier(0.05, 0.7, 0.1, 1)';
+const COLLAPSE_EASING = 'cubic-bezier(0.3, 0, 0.8, 0.15)';
+
+const LONG_PRESS_DURATION = 500;
+const LONG_PRESS_TOLERANCE = 10; // 超过该位移视为滑动/滚动，取消长按
+
+export const NoteCard = memo(function NoteCard({
   note,
   isBatchMode,
   isSelected,
   index,
-  onClick,
+  onOpen,
   onToggleSelect,
   onLongPress,
 }: NoteCardProps) {
+  // 绑定本卡片引用：memo 下父级回调保持稳定，这里只在 note/id 变化时重绑
+  const handleOpen = useCallback(() => onOpen(note), [onOpen, note]);
+  const handleToggleSelect = useCallback(() => onToggleSelect(note.id), [onToggleSelect, note.id]);
+  const handleLongPress = useCallback(() => onLongPress(note.id), [onLongPress, note.id]);
+
   const touchStartXRef = useRef(0);
   const touchStartYRef = useRef(0);
-
-  const LONG_PRESS_DURATION = 500;
-  const LONG_PRESS_TOLERANCE = 10; // 超过该位移视为滑动/滚动，取消长按
-
   const longPressTimerRef = useRef<number | null>(null);
   const longPressFiredRef = useRef(false);
 
@@ -64,9 +76,9 @@ export function NoteCard({
     longPressTimerRef.current = window.setTimeout(() => {
       longPressTimerRef.current = null;
       longPressFiredRef.current = true;
-      onLongPress();
+      handleLongPress();
     }, LONG_PRESS_DURATION);
-  }, [isBatchMode, clearLongPressTimer, onLongPress]);
+  }, [isBatchMode, clearLongPressTimer, handleLongPress]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -92,13 +104,16 @@ export function NoteCard({
     e.preventDefault();
   }, []);
 
-  // ── 卡内快速展开 / 收起（手风琴）：高度动画走命令式 style，React 状态只管视觉 ──
+  // ── 卡内快速展开 / 收起（手风琴）──
+  // 高度动画走 Web Animations API：点击时读一次起始高度，DOM 提交后测一次目标高度，
+  // 全程只有一次必要的同步布局；动画期间浏览器不再触发 transition 的逐帧样式重算。
   const [expanded, setExpanded] = useState(false);
   const [collapsing, setCollapsing] = useState(false);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const collapsedHeightRef = useRef(0);
-  const animDirRef = useRef<'expand' | 'collapse' | null>(null);
-  const reduceMotion = useRef(
+  const pendingRef = useRef<{ dir: 'expand' | 'collapse'; from: number } | null>(null);
+  const animRef = useRef<Animation | null>(null);
+  const reduceMotionRef = useRef(
     typeof window !== 'undefined' &&
       !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   );
@@ -113,34 +128,56 @@ export function NoteCard({
     e.stopPropagation();
   }, []);
 
+  /** 动画结束收尾：展开交还 auto（自适应后续内容/主题变化），收起移除内联高度恢复截断态 */
+  const settle = useCallback((dir: 'expand' | 'collapse') => {
+    const body = bodyRef.current;
+    if (dir === 'expand') {
+      if (body) body.style.height = 'auto';
+    } else {
+      if (body) body.style.removeProperty('height');
+      setCollapsing(false);
+    }
+  }, []);
+
+  const stopAnimation = useCallback(() => {
+    const anim = animRef.current;
+    animRef.current = null;
+    if (anim) {
+      anim.onfinish = null;
+      anim.oncancel = null;
+      anim.cancel();
+    }
+  }, []);
+
   const toggleExpand = useCallback(() => {
     const body = bodyRef.current;
 
-    // 减动效偏好：跳过高度动画，直接切换
-    if (reduceMotion.current || !body) {
-      animDirRef.current = null;
+    if (!body || reduceMotionRef.current) {
+      stopAnimation();
+      body?.style.removeProperty('height');
       setCollapsing(false);
       setExpanded((v) => !v);
       return;
     }
 
+    // 动画进行中时以当前高度为新起点（连点不跳变）；静止时顺带刷新收起基准高度
+    const running = animRef.current !== null;
+    const from = body.clientHeight;
+    if (!running && !expanded) collapsedHeightRef.current = from;
+    stopAnimation();
+
     if (expanded) {
-      // 收起：冻结当前渲染高度，下一帧过渡回收纳高度
-      body.style.height = `${body.clientHeight}px`;
-      animDirRef.current = 'collapse';
+      pendingRef.current = { dir: 'collapse', from };
       setExpanded(false);
       setCollapsing(true);
     } else {
-      // 展开：冻结当前高度作为动画起点；仅在静止时更新收纳基准（避免快速连点覆盖基准值）
-      if (animDirRef.current === null) {
-        collapsedHeightRef.current = body.clientHeight;
-      }
-      body.style.height = `${body.clientHeight}px`;
-      animDirRef.current = 'expand';
+      pendingRef.current = { dir: 'expand', from };
       setCollapsing(false);
       setExpanded(true);
     }
-  }, [expanded]);
+  }, [expanded, stopAnimation]);
+
+  useEffect(() => stopAnimation, [stopAnimation]);
 
   const handleToggleExpand = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -156,11 +193,11 @@ export function NoteCard({
     }
 
     if (isBatchMode) {
-      onToggleSelect();
+      handleToggleSelect();
     } else {
       toggleExpand();
     }
-  }, [isBatchMode, onToggleSelect, toggleExpand]);
+  }, [isBatchMode, handleToggleSelect, toggleExpand]);
 
   // 内容区点击：进入笔记详情（批量模式下冒泡给卡片级处理选中）
   const handleContentClick = useCallback((e: React.MouseEvent) => {
@@ -171,34 +208,51 @@ export function NoteCard({
 
     if (isBatchMode) return;
     e.stopPropagation();
-    onClick();
-  }, [isBatchMode, onClick]);
+    handleOpen();
+  }, [isBatchMode, handleOpen]);
 
-  // DOM 提交后再测目标高度并启动过渡（强制 reflow 让起始高度先生效，否则会被合并成一次跳变）
+  // DOM 提交后测目标高度并启动动画（此时布局本就要重算，测量不再产生额外开销）
   useLayoutEffect(() => {
-    const body = bodyRef.current;
-    if (!body || !animDirRef.current) return;
-    void body.offsetHeight;
-    const target =
-      animDirRef.current === 'expand' ? body.scrollHeight : collapsedHeightRef.current;
-    body.style.height = `${target}px`;
-  }, [expanded, collapsing]);
+    const pending = pendingRef.current;
+    if (!pending) return;
+    pendingRef.current = null;
 
-  // 过渡结束：展开回 auto（自适应后续内容/主题变化），收起移除内联高度恢复截断态
-  const handleBodyTransitionEnd = useCallback(
-    (e: React.TransitionEvent<HTMLDivElement>) => {
-      const body = bodyRef.current;
-      if (e.target !== body || e.propertyName !== 'height' || !animDirRef.current) return;
-      animDirRef.current = null;
-      if (expanded) {
-        body.style.height = 'auto';
-      } else {
-        body.style.removeProperty('height');
-        setCollapsing(false);
+    const body = bodyRef.current;
+    if (!body) return;
+
+    const { dir, from } = pending;
+    const to = dir === 'expand' ? body.scrollHeight : collapsedHeightRef.current;
+
+    // 高度无变化或环境不支持 WAAPI：直接落到终态
+    if (Math.abs(to - from) < 1 || typeof body.animate !== 'function') {
+      settle(dir);
+      return;
+    }
+
+    const anim = body.animate(
+      [{ height: `${from}px` }, { height: `${to}px` }],
+      {
+        duration: dir === 'expand' ? EXPAND_DURATION : COLLAPSE_DURATION,
+        easing: dir === 'expand' ? EXPAND_EASING : COLLAPSE_EASING,
+        fill: 'forwards',
       }
-    },
-    [expanded]
-  );
+    );
+    animRef.current = anim;
+
+    const finish = () => {
+      if (animRef.current !== anim) return; // 已被新的切换接管
+      animRef.current = null;
+      anim.onfinish = null;
+      anim.oncancel = null;
+      // 先撤掉 fill 效果再落内联样式，避免中间帧闪回
+      anim.cancel();
+      settle(dir);
+    };
+    anim.onfinish = finish;
+    anim.oncancel = () => {
+      if (animRef.current === anim) animRef.current = null;
+    };
+  });
 
   const tagColor = getTagColor(note.tagColor);
   // 卡片预览用纯文本：剥离 Markdown 语法，仅作展示
@@ -211,11 +265,19 @@ export function NoteCard({
   const displayTitle = note.title || plainContent.slice(0, 20);
   const isPlaceholderTitle = !note.title && !!note.content;
 
+  // 空闲时预渲染本卡片的 HTML，首次点击展开即可命中缓存
+  useEffect(() => {
+    prewarmMarkdownHtml(note.content);
+  }, [note.content]);
+
   // 纯展示用 CSS 变量：--tag-c 标签色（色点及光环）、--i 首屏编排索引（前 8 张）
-  const cardStyle = {
-    ...(tagColor ? { '--tag-c': tagColor } : {}),
-    ...(index !== undefined && index < 8 ? { '--i': index } : {}),
-  } as React.CSSProperties;
+  const isEnter = index < 8;
+  const cardStyle = useMemo(() => {
+    const style: Record<string, string | number> = {};
+    if (tagColor) style['--tag-c'] = tagColor;
+    if (isEnter) style['--i'] = index;
+    return style as React.CSSProperties;
+  }, [tagColor, isEnter, index]);
 
   return (
     <div className="note-card-wrapper">
@@ -223,7 +285,7 @@ export function NoteCard({
       <div
         className={`note-card ${isBatchMode ? 'note-card-batch' : ''} ${
           showOpen ? 'note-card-open' : ''
-        }`}
+        }${isEnter ? ' note-card-enter' : ''}`}
         style={cardStyle}
         onClick={handleCardClick}
         onContextMenu={handleContextMenu}
@@ -281,12 +343,8 @@ export function NoteCard({
             <div className="note-card-tag" />
           )}
         </div>
-        {/* 高度过渡容器：收起时裁剪为两行，展开时随内容向下拉伸 */}
-        <div
-          className="note-card-body"
-          ref={bodyRef}
-          onTransitionEnd={handleBodyTransitionEnd}
-        >
+        {/* 高度动画容器：收起时裁剪为两行，展开时随内容向下拉伸 */}
+        <div className="note-card-body" ref={bodyRef}>
           {note.content && (note.title || showOpen) && (
             showOpen ? (
               // 展开态：Markdown 预览（HTML 已在 renderMarkdownHtml 内 sanitize）
@@ -330,4 +388,4 @@ export function NoteCard({
       </div>
     </div>
   );
-}
+});

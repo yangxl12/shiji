@@ -1,6 +1,10 @@
 .note-card-wrapper {
   position: relative;
   margin-bottom: 8px;
+  /* 长列表：离屏卡片跳过布局与绘制（滚动、首屏渲染、内存占用都大幅下降）。
+     contain-intrinsic-size 的 auto 关键字会记住真实高度，滚动条基本不跳。 */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 112px;
 }
 
 /* 实体白卡（列表卡片禁用玻璃——60fps 关键决策）：
@@ -19,10 +23,16 @@
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   z-index: 1;
-  /* 首屏入场：fade-rise，前 8 张按 --i 递进 28ms（TSX 注入，长列表保护） */
+  /* 布局隔离：卡片内部布局自成一体，展开/收起的高度动画不会把整条列表拖进重排 */
+  contain: layout style;
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+
+/* 首屏入场：fade-rise，仅前 8 张按 --i 递进 28ms。
+   长列表若全员跑入场动画，上百个元素同帧做合成会直接掉帧。 */
+.note-card-enter {
   animation: note-card-in var(--dur-base) var(--ease-standard) backwards;
   animation-delay: calc(var(--i, 0) * 28ms);
-  transition: transform var(--dur-fast) var(--ease-standard);
 }
 
 /* hover 阴影经伪元素预渲染、opacity 切换，避免 box-shadow 过渡掉帧 */
@@ -149,10 +159,11 @@
   transform: rotate(180deg);
 }
 
-/* 高度过渡容器：收起时裁剪两行，展开时随内容向下拉伸 */
+/* 高度动画容器：收起时裁剪两行，展开时随内容向下拉伸。
+   动画由 Web Animations API 驱动（见 NoteCard.tsx），此处不写 transition：
+   transition 依赖样式重算判定起止帧，WAAPI 直接给关键帧，省掉一次强制回流。 */
 .note-card-body {
   overflow: hidden;
-  transition: height var(--dur-slow) var(--ease-standard);
 }
 
 /* 展开态内容：解除两行截断，保留换行 */
@@ -473,6 +484,12 @@
   .note-card-body {
     flex: 1;
     min-height: 0;
+  }
+
+  /* 展开态取消 flex 拉伸：flex:1 的 basis:0 会覆盖内联 height，
+     否则高度动画在桌面端完全不生效（表现为直接跳变） */
+  .note-card.note-card-open .note-card-body {
+    flex: 0 0 auto;
   }
 
   .note-card-time {

@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Note, NoteInput, Category, TagColor } from '../types';
+import type { Note, NoteInput, TagColor } from '../types';
 import { DB_NAME, DB_VERSION, STORE_NAME, MAX_TITLE_LENGTH, MAX_CONTENT_LENGTH, TRASH_RETENTION_DAYS } from '../utils/constants';
 
 interface ShiJiDB extends DBSchema {
@@ -235,32 +235,10 @@ export async function getNoteById(id: string): Promise<Note | undefined> {
   return note?.isDeleted ? undefined : note;
 }
 
-export async function getNotesByCategory(category: Category): Promise<Note[]> {
-  const db = getDB();
-  const index = db.transaction(STORE_NAME).store.index('by-category');
-  const allNotes = await index.getAll(category);
-  return allNotes
-    .filter((note) => !note.isDeleted)
-    .sort(compareNotes);
-}
-
-export async function getNotesByTagColor(tagColor: TagColor): Promise<Note[]> {
-  const db = getDB();
-  const index = db.transaction(STORE_NAME).store.index('by-tagColor');
-  const allNotes = await index.getAll(tagColor);
-  return allNotes
-    .filter((note) => !note.isDeleted)
-    .sort(compareNotes);
-}
-
-export async function getAllTaggedNotes(): Promise<Note[]> {
-  const db = getDB();
-  const allNotes = await db.getAll(STORE_NAME);
-  return allNotes
-    .filter((note) => !note.isDeleted && note.tagColor !== null)
-    .sort(compareNotes);
-}
-
+/**
+ * 未删除的全部笔记（按标记色 + 创建时间排序）。
+ * 列表页 / 标签页 / 搜索共用这一次读取，再在内存里分组，避免切页重复扫库。
+ */
 export async function getAllNotes(): Promise<Note[]> {
   const db = getDB();
   const allNotes = await db.getAll(STORE_NAME);

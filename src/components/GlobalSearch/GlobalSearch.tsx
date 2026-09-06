@@ -22,6 +22,9 @@ interface SearchResult {
   snippet: string;
 }
 
+/** 单次最多渲染的结果条数：命中极多时避免一次性铺出上百个 DOM 节点 */
+const MAX_RENDERED_RESULTS = 60;
+
 /** 命中片段：命中词前 / 后保留的字符数 */
 const SNIPPET_BEFORE = 16;
 const SNIPPET_AFTER = 44;
@@ -97,12 +100,15 @@ export function GlobalSearch({ notes, keyboardInset, onViewNote }: GlobalSearchP
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  // 正文纯文本化较重，且只随笔记变化；与关键词解耦，避免每次输入重算
+  // 正文纯文本化较重，且只随笔记变化；与关键词解耦，避免每次输入重算。
+  // 小写副本一并预存：否则每敲一个字都要对每条笔记的标题+正文各做一次 toLowerCase。
   const indexed = useMemo(
     () =>
       notes.map((note) => {
         const plain = markdownToPlainText(note.content);
-        return { note, title: note.title || plain.slice(0, 20), plain };
+        const title = note.title || plain.slice(0, 20);
+        // 各存一份小写副本即可，不再拼 title+plain 的长字符串（避免正文再复制一份）
+        return { note, title, plain, titleLower: title.toLowerCase(), plainLower: plain.toLowerCase() };
       }),
     [notes]
   );
@@ -114,10 +120,7 @@ export function GlobalSearch({ notes, keyboardInset, onViewNote }: GlobalSearchP
     const lower = trimmed.toLowerCase();
     const out: SearchResult[] = [];
     for (const item of indexed) {
-      if (
-        item.title.toLowerCase().includes(lower) ||
-        item.plain.toLowerCase().includes(lower)
-      ) {
+      if (item.titleLower.includes(lower) || item.plainLower.includes(lower)) {
         out.push({ note: item.note, title: item.title, snippet: buildSnippet(item.plain, trimmed) });
       }
     }
@@ -236,7 +239,7 @@ export function GlobalSearch({ notes, keyboardInset, onViewNote }: GlobalSearchP
                   <>
                     <div className="global-search-count">找到 {results.length} 条</div>
                     <ul className="global-search-list">
-                      {results.map(({ note, title, snippet }) => {
+                      {results.slice(0, MAX_RENDERED_RESULTS).map(({ note, title, snippet }) => {
                         const category = CATEGORIES.find((c) => c.key === note.category);
                         const tagColor = note.tagColor
                           ? TAG_COLORS.find((c) => c.key === note.tagColor)?.value
@@ -273,6 +276,11 @@ export function GlobalSearch({ notes, keyboardInset, onViewNote }: GlobalSearchP
                       })}
                     </ul>
                   </>
+                )}
+                {results.length > MAX_RENDERED_RESULTS && (
+                  <p className="global-search-more">
+                    仅显示前 {MAX_RENDERED_RESULTS} 条，输入更多关键词可缩小范围
+                  </p>
                 )}
               </div>
             </div>
