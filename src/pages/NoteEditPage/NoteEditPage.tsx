@@ -79,6 +79,14 @@ export function NoteEditPage({
   const originalContent = note?.content ?? '';
   const originalTagColor = note?.tagColor ?? null;
 
+  // 表单重置只应发生在「切换笔记」时：note 字段随保存回写而变化，
+  // 若直接列入依赖，自动保存途中用户继续输入的内容会被重置覆盖。
+  // 故经 ref 读取最新 note，effect 只跟随 id / isCreating 变化。
+  const noteForResetRef = useRef(note);
+  useEffect(() => {
+    noteForResetRef.current = note;
+  }, [note]);
+
   // Reset form state when note or isCreating changes
   useEffect(() => {
     if (stayEditingRef.current) {
@@ -86,11 +94,12 @@ export function NoteEditPage({
       stayEditingRef.current = false;
       return;
     }
-    noteKeyRef.current = note?.id ?? 'creating';
-    setSessionKey(note?.id ?? 'creating');
-    setTitle(note?.title ?? '');
-    setContent(note?.content ?? '');
-    setTagColor(note?.tagColor ?? null);
+    const current = noteForResetRef.current;
+    noteKeyRef.current = current?.id ?? 'creating';
+    setSessionKey(current?.id ?? 'creating');
+    setTitle(current?.title ?? '');
+    setContent(current?.content ?? '');
+    setTagColor(current?.tagColor ?? null);
     setShowDeleteModal(false);
     setHasChanges(false);
   }, [note?.id, isCreating]);

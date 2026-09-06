@@ -97,10 +97,26 @@ export function SettingsPage({
     }
   }, [onToast]);
 
-  // 挂载即刷新计数（主视图回收站入口的角标）
+  // 挂载即刷新计数（主视图回收站入口的角标）：
+  // 推到下一帧执行，不阻塞设置页首帧渲染；路过设置页不跑 purge（写事务），
+  // 过期清理只在进入回收站视图时做（refreshTrash 内部）。
   useEffect(() => {
-    void refreshTrash();
-  }, [refreshTrash]);
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const list = await getDeletedNotes();
+        if (cancelled) return;
+        setDeletedNotes(list);
+        setTrashCount(list.length);
+      } catch {
+        // 角标加载失败静默处理，进入回收站时会重试并提示
+      }
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   const openTrash = useCallback(() => {
     setView('trash');
